@@ -35,6 +35,7 @@ Do not introduce a new framework or infrastructure component without a concrete 
 - Keep business logic out of controllers.
 - Prefer clear, explicit code over speculative abstractions.
 - Avoid generic utility classes unless there is a demonstrated reuse case.
+- Write meaningful Javadoc/comments for public classes, records, functions, DTOs, and service methods (see section 20).
 - Do not silently change an established business rule.
 - When a requirement is not defined, mark it as `TBD` rather than inventing behavior.
 
@@ -495,3 +496,26 @@ Before implementing a feature:
 5. Check `project-status.md` before marking work as completed.
 
 When a requirement changes, update the documentation before generating large amounts of code.
+
+---
+
+## 20. Code Commenting Rules (Quy tắc comment code)
+
+Mọi mã nguồn trong dự án phải tuân thủ các quy tắc comment và tài liệu hóa sau:
+
+1. **Javadoc cho public components và API contracts**:
+   - Mọi `class`, `record`, `interface`, DTO, response wrapper (`ApiSuccessResponse`, `ApiErrorResponse`), exception handler, và public service method đều phải có Javadoc mô tả rõ ràng trách nhiệm và mục đích nghiệp vụ.
+2. **Đầy đủ các thẻ mô tả chi tiết**:
+   - Sử dụng thẻ `@param` giải thích ý nghĩa từng tham số đầu vào.
+   - Sử dụng `@param <T>` giải thích kiểu generic (nếu có).
+   - Sử dụng `@return` mô tả giá trị và trạng thái của kết quả trả về.
+   - Sử dụng `@throws` mô tả rõ các trường hợp ném ra ngoại lệ nghiệp vụ hoặc hệ thống.
+3. **Tính nhất quán về ngôn ngữ**:
+   - Viết comment súc tích, dễ hiểu, ưu tiên tiếng Việt chuẩn mực cho các thông điệp nghiệp vụ và tài liệu module; không dùng teencode hay từ ngữ tối nghĩa.
+4. **Đồng bộ hóa khi cập nhật code**:
+   - Bất kỳ khi nào logic, tham số, mã lỗi hay hành vi của hàm thay đổi, lập tức cập nhật comment đi kèm. Không để comment lỗi thời (outdated) gây hiểu lầm.
+5. **Tránh comment thừa thãi**:
+   - Không viết comment lặp lại tên hàm một cách sáo rỗng (ví dụ: `// get name` cho `getName()`). Chỉ giải thích mục đích, logic đặc thù, hoặc bối cảnh nghiệp vụ.
+6. **Bảo mật và an toàn dữ liệu**:
+   - Tuyệt đối không đưa mật khẩu, JWT token, refresh token, secret key, mã OTP, payload nhạy cảm hoặc thông tin định danh cá nhân vào comment code.
+

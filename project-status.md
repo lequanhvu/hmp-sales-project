@@ -1,6 +1,6 @@
 # Project Status
 
-> Last updated: 2026-10-12 | By: @antigravity | Session: #1
+> Last updated: 2026-10-13 | By: @antigravity | Session: #2
 >
 > AI: update this file at the end of every session when asked.
 > Follow this exact format. Preserve full milestone checklists and project specifications.
@@ -8,6 +8,16 @@
 ---
 
 ## Completed
+- ✅ **Phase 0 — Foundation & Infrastructure completed**:
+  - Spring Boot 4.1.1 project configured with Java 21, Spring Data JPA, Spring Security 7, OAuth2 Resource Server, Redis, Validation, Lombok, and H2 test DB.
+  - Multi-profile YAML configuration (`application.yaml`, `application-dev.yaml`, `application-test.yaml`) with `AppProperties` for JWT, OTP, CORS, and order properties.
+  - Standard API response wrappers: `ApiSuccessResponse<T>`, `ApiErrorResponse<T>`, `ValidationErrorResponse` matching `api-spec.md`.
+  - Base custom exceptions: `ResourceNotFoundException`, `BusinessRuleException`, `UnauthorizedOperationException`, `InvalidOrderStateException`, `OtpVerificationException`.
+  - Centralized `@RestControllerAdvice` (`GlobalExceptionHandler`) for Vietnamese standardized error responses and validation messages.
+  - `RedisConfig` with `RedisTemplate<String, Object>` and `StringRedisTemplate`.
+  - `SecurityConfig` with stateless OAuth2 Resource Server, HMAC-SHA256 `JwtDecoder`, custom `RestAuthenticationEntryPoint`, and `RestAccessDeniedHandler`.
+  - `RedisTokenValidationFilter` enforcing active token verification against `auth:access:{jti}` in Redis.
+  - 23 unit and integration tests passing (`ApiResponseTest`, `GlobalExceptionHandlerTest`, `RedisTokenValidationFilterTest`, `SalesBackendApplicationTests`).
 - ✅ **Requirements baseline confirmed**:
   - Website purpose: direct online sales + product introduction/contact.
   - Initial scope: Vietnamese language, mobile responsive, individual customers, one province/city.
@@ -41,7 +51,7 @@
   - Platform: `Notification`, `SystemLog`, `SystemSetting`.
   - Redis key design: `auth:access:{jti}`, `otp:phone:<phone>`, and rate-limiting keys.
 - ✅ **REST API specification completed** (`api-spec.md`):
-  - Standard response format (`ApiResponse<T>`) and error envelope (`ApiErrorResponse`).
+  - Standard response format (`ApiSuccessResponse<T>`) and error envelope (`ApiErrorResponse<T>`).
   - Public catalog APIs, Google auth & token APIs, Customer profile/address/order APIs, Manager catalog/order processing APIs, Admin user/role/setting/audit APIs.
 - ✅ **Project rules & instructions established**:
   - `AGENTS.md` and `.agents/rules/project-rules.md` (technology baseline, coding rules, Redis/PostgreSQL rules, testing rules).
@@ -73,22 +83,22 @@ _Nothing._
 - ⚠️ **Scope Protection**: Do NOT implement V1 excluded modules (payment gateways, promotions, reviews, inventory, quotation, warranty, laser cutting, blogs).
 
 ## Next Tasks
-1. **[P1]** Initialize Spring Boot 4.x project skeleton (Maven, PostgreSQL driver, Spring Data JPA, Spring Security 7, Redis, validation, Lombok).
-2. **[P1]** Implement Phase 0 Foundation: Base exception classes, GlobalExceptionHandler, ApiResponse wrapper, SecurityConfig, RedisConfig.
-3. **[P1]** Implement Phase 1: Role, Permission, RolePermission, and User entities + repositories.
+1. **[P1]** Implement Phase 1: `Role`, `Permission`, `RolePermission`, and `User` entities with JPA mapping and audit columns.
+2. **[P1]** Implement Phase 1: Repositories (`RoleRepository`, `PermissionRepository`, `RolePermissionRepository`, `UserRepository`).
+3. **[P1]** Implement Phase 1 seed data / migration and permission evaluation service for dynamic `PRODUCT_PRICE_VIEW`.
 
 ## Milestones
 
 ### Phase 0 — Foundation & Infrastructure
-- [ ] Create Spring Boot 4.x project skeleton (Maven, application.yml, multi-profile config)
-- [ ] PostgreSQL datasource & JPA/Hibernate setup
-- [ ] Redis connection & RedisTemplate / Lettuce configuration
-- [ ] Base exception classes (`ResourceNotFoundException`, `BusinessRuleException`, `UnauthorizedOperationException`, `InvalidOrderStateException`, `OtpVerificationException`)
-- [ ] Centralized exception handling (`@RestControllerAdvice`, `GlobalExceptionHandler`)
-- [ ] Standard API response wrapper (`ApiResponse<T>`, `ApiErrorResponse`)
-- [ ] Jakarta Bean Validation configuration
-- [ ] Spring Security 7 OAuth2 Resource Server baseline configuration
-- [ ] Redis-backed access token validation filter / bearer token interceptor (`jti`)
+- [x] Create Spring Boot 4.x project skeleton (Maven, application.yml, multi-profile config)
+- [x] PostgreSQL datasource & JPA/Hibernate setup
+- [x] Redis connection & RedisTemplate / Lettuce configuration
+- [x] Base exception classes (`ResourceNotFoundException`, `BusinessRuleException`, `UnauthorizedOperationException`, `InvalidOrderStateException`, `OtpVerificationException`)
+- [x] Centralized exception handling (`@RestControllerAdvice`, `GlobalExceptionHandler`)
+- [x] Standard API response wrapper (`ApiSuccessResponse<T>`, `ApiErrorResponse<T>`)
+- [x] Jakarta Bean Validation configuration
+- [x] Spring Security 7 OAuth2 Resource Server baseline configuration
+- [x] Redis-backed access token validation filter / bearer token interceptor (`jti`)
 
 ### Phase 1 — Identity, Roles & Permissions
 - [ ] Role entity, repository, and seed data (`ADMIN`, `MANAGER`, `CUSTOMER`)

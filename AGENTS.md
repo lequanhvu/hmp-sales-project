@@ -53,6 +53,7 @@ Do not invent business behavior when the requirements are silent. Mark unresolve
 5. Add or update tests for business rules and security-sensitive behavior.
 
 ### When implementing a feature:
+- Write clear Javadoc comments for all public classes, records, functions, DTOs, and service methods.
 - Update the relevant `.md` document when the behavior or contract changes.
 - Update `project-status.md` only after the implementation state actually changes.
 - Do not mark work complete based only on generated code; verify it with tests or a documented manual check.
