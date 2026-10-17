@@ -1,28 +1,63 @@
+# ==============================================================================
+# CẤU HÌNH CHÍNH CỦA HỆ THỐNG SALES-BACKEND
+# ==============================================================================
+
 spring:
   application:
     name: sales-backend
   profiles:
+    # Profile mặc định được kích hoạt khi khởi chạy (ưu tiên biến môi trường SPRING_PROFILES_ACTIVE nếu có)
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+# ------------------------------------------------------------------------------
+# Cấu hình Web Server (Tomcat)
+# ------------------------------------------------------------------------------
 server:
+  # Cổng mạng ứng dụng lắng nghe (mặc định 8080, có thể ghi đè bằng SERVER_PORT)
   port: ${SERVER_PORT:8080}
   servlet:
+    # Đường dẫn gốc (context path) của toàn bộ ứng dụng
     context-path: /
 
+# ------------------------------------------------------------------------------
+# Cấu hình nghiệp vụ tùy chỉnh của ứng dụng (AppProperties)
+# ------------------------------------------------------------------------------
 app:
+  # Cấu hình Token xác thực người dùng (JWT & Refresh Token)
   jwt:
+    # Định danh đơn vị phát hành token (claim 'iss')
     issuer: sales-backend
+    # Khóa bí mật ký JWT bằng thuật toán HMAC-SHA256 (tối thiểu 256-bit, ghi đè qua JWT_SECRET khi triển khai)
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    # Thời hạn hiệu lực của Access Token (JWT) tính theo phút.
+    # Đây cũng là thời gian sống (TTL) của bản ghi active token "auth:access:{jti}" lưu trên Redis.
     expiration-minutes: 60
+    # Thời hạn hiệu lực của Refresh Token tính theo ngày (lưu dưới dạng hash trong PostgreSQL).
     refresh-expiration-days: 30
+
+  # Cấu hình mã xác thực số điện thoại OTP (lưu trữ tạm thời trên Redis)
   otp:
+    # Thời gian sống (TTL) của mã OTP kể từ lúc gửi (300 giây = 5 phút)
     expiry-seconds: 300
+    # Số lần nhập sai mã OTP tối đa cho phép trước khi vô hiệu hóa mã hiện tại
     max-attempts: 3
+    # Khoảng cách tối thiểu giữa 2 lần yêu cầu gửi lại OTP (giới hạn tần suất gọi - rate limiting)
     resend-interval-seconds: 60
+
+  # Cấu hình đơn hàng
   order:
+    # Giá trị mặc định ban đầu cho thời gian khách được phép hủy đơn (tính bằng phút).
+    # LƯU Ý: Trong quá trình vận hành, giá trị này được Admin quản trị động qua bảng SystemSetting
+    # với key 'ORDER_CUSTOMER_CANCELLATION_WINDOW_MINUTES'.
     cancellation-window-minutes: 30
+
+  # Cấu hình chia sẻ tài nguyên liên nguồn (CORS) cho Frontend
   cors:
+    # Danh sách các domain frontend được phép gọi API (Next.js, Vite, ...)
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    # Các phương thức HTTP được chấp nhận
     allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+    # Các header HTTP được chấp nhận trong request
     allowed-headers: "*"
+    # Cho phép gửi kèm thông tin xác thực/cookie (cần thiết cho cookie HttpOnly của Refresh Token)
     allow-credentials: true
