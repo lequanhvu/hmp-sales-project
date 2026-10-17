@@ -1,6 +1,6 @@
 # Project Status
 
-> Last updated: 2026-10-13 | By: @antigravity | Session: #2
+> Last updated: 2026-10-18 | By: @antigravity | Session: #3
 >
 > AI: update this file at the end of every session when asked.
 > Follow this exact format. Preserve full milestone checklists and project specifications.
@@ -8,6 +8,19 @@
 ---
 
 ## Completed
+- ✅ **Phase 1 — Identity, Roles & Permissions (Task 1 & Task 2 completed)**:
+  - JPA Entities configured in `com.hmp.sales.user.entity`:
+    - `Role` (bảng `roles`, khóa chính `role_id`, ràng buộc duy nhất trên `role_code`, cờ `is_deleted`, audit timestamps).
+    - `Permission` (bảng `permissions`, khóa chính `permission_id`, `permission_name` duy nhất, ràng buộc `(api_path, method)`, phân hệ `module`, cờ `is_deleted`, audit timestamps).
+    - `RolePermission` (bảng liên kết `role_permissions`, composite key `RolePermissionId`, hỗ trợ phân quyền động `PRODUCT_PRICE_VIEW`).
+    - `User` (bảng `users`, khóa chính `user_id`, hỗ trợ `GOOGLE` và `LOCAL`, `ACTIVE`/`LOCKED`, ràng buộc duy nhất `email` và `(auth_provider, provider_subject)`).
+  - Enums: `RoleCode` (`ADMIN`, `MANAGER`, `CUSTOMER`), `AuthProvider` (`GOOGLE`, `LOCAL`), `UserStatus` (`ACTIVE`, `LOCKED`).
+  - Spring Data JPA Repositories in `com.hmp.sales.user.repository`:
+    - `RoleRepository`: tìm theo `roleCode`, lọc `isDeleted = false`.
+    - `PermissionRepository`: tìm theo `permissionName`, `apiPath` + `method`, lọc theo module.
+    - `RolePermissionRepository`: tìm quyền theo role (`findPermissionsByRoleId`), kiểm tra quyền nhanh (`hasPermission`).
+    - `UserRepository`: tìm theo `email`, `authProvider` + `providerSubject`, eager fetch role (`findByIdWithRole`, `findByEmailWithRole`).
+  - Toàn bộ 35/35 unit và integration tests pass (thêm 12 repository test cases mới: `RoleRepositoryTest`, `PermissionRepositoryTest`, `RolePermissionRepositoryTest`, `UserRepositoryTest`).
 - ✅ **Phase 0 — Foundation & Infrastructure completed**:
   - Spring Boot 4.1.1 project configured with Java 21, Spring Data JPA, Spring Security 7, OAuth2 Resource Server, Redis, Validation, Lombok, and H2 test DB.
   - Multi-profile YAML configuration (`application.yaml`, `application-dev.yaml`, `application-test.yaml`) with `AppProperties` for JWT, OTP, CORS, and order properties.
@@ -83,9 +96,9 @@ _Nothing._
 - ⚠️ **Scope Protection**: Do NOT implement V1 excluded modules (payment gateways, promotions, reviews, inventory, quotation, warranty, laser cutting, blogs).
 
 ## Next Tasks
-1. **[P1]** Implement Phase 1: `Role`, `Permission`, `RolePermission`, and `User` entities with JPA mapping and audit columns.
-2. **[P1]** Implement Phase 1: Repositories (`RoleRepository`, `PermissionRepository`, `RolePermissionRepository`, `UserRepository`).
-3. **[P1]** Implement Phase 1 seed data / migration and permission evaluation service for dynamic `PRODUCT_PRICE_VIEW`.
+1. **[P1]** Implement Phase 1: Seed data / migration and permission evaluation service for dynamic `PRODUCT_PRICE_VIEW`.
+2. **[P1]** Implement Phase 1: Admin User management service & APIs (search, lock/unlock accounts, create Manager).
+3. **[P1]** Implement Phase 1: Admin Role & Permission management APIs (toggle `PRODUCT_PRICE_VIEW` for Customer).
 
 ## Milestones
 
@@ -101,11 +114,12 @@ _Nothing._
 - [x] Redis-backed access token validation filter / bearer token interceptor (`jti`)
 
 ### Phase 1 — Identity, Roles & Permissions
-- [ ] Role entity, repository, and seed data (`ADMIN`, `MANAGER`, `CUSTOMER`)
-- [ ] Permission entity, repository, and seed data (including `PRODUCT_PRICE_VIEW`, `ORDER_*`, `PRODUCT_*`)
-- [ ] RolePermission join entity & repository
-- [ ] User entity (supporting `GOOGLE` and `LOCAL` auth providers, `ACTIVE`/`LOCKED` status)
-- [ ] User unique constraints (`Email`, `(AuthProvider, ProviderSubject)`)
+- [x] Role entity & repository (`ADMIN`, `MANAGER`, `CUSTOMER`)
+- [x] Permission entity & repository (including `PRODUCT_PRICE_VIEW`, `ORDER_*`, `PRODUCT_*`)
+- [x] RolePermission join entity & repository
+- [x] User entity & repository (supporting `GOOGLE` and `LOCAL` auth providers, `ACTIVE`/`LOCKED` status)
+- [x] User unique constraints (`Email`, `(AuthProvider, ProviderSubject)`)
+- [ ] Role & Permission initial seed data / migration
 - [ ] Permission evaluation service / custom authorization manager for dynamic permission checks
 - [ ] Admin User management service & APIs (search, lock/unlock accounts, create Manager)
 - [ ] Admin Role & Permission management APIs (toggle `PRODUCT_PRICE_VIEW` for Customer)
