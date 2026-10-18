@@ -26,13 +26,14 @@ import java.util.Set;
 /**
  * Thực thể đại diện cho quyền hạn trong hệ thống (Permission).
  * <p>
- * Lưu trữ tại bảng {@code permissions}. Quản lý quyền hạn chi tiết theo đường dẫn API, phương thức HTTP,
+ * Lưu trữ tại bảng {@code permissions}. Quản lý quyền hạn chi tiết theo đường
+ * dẫn API, phương thức HTTP,
  * và các quyền nghiệp vụ đặc thù (tiêu biểu như {@code PRODUCT_PRICE_VIEW}).
  */
 @Entity
 @Table(name = "permissions", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_permissions_name", columnNames = {"permission_name"}),
-        @UniqueConstraint(name = "uk_permissions_api_method", columnNames = {"api_path", "method"})
+        @UniqueConstraint(name = "uk_permissions_name", columnNames = { "permission_name" }),
+        @UniqueConstraint(name = "uk_permissions_api_method", columnNames = { "api_path", "method" })
 })
 @Getter
 @Setter
@@ -50,7 +51,8 @@ public class Permission {
     private Integer id;
 
     /**
-     * Tên mã quyền hạn nghiệp vụ (ví dụ: "PRODUCT_PRICE_VIEW", "PRODUCT_CREATE", "ORDER_VIEW_OWN").
+     * Tên mã quyền hạn nghiệp vụ (ví dụ: "PRODUCT_PRICE_VIEW", "PRODUCT_CREATE",
+     * "ORDER_VIEW_OWN").
      */
     @Column(name = "permission_name", nullable = false, unique = true, length = 150)
     private String permissionName;
@@ -121,8 +123,10 @@ public class Permission {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         Permission that = (Permission) o;
         return Objects.equals(permissionName, that.permissionName);
     }
