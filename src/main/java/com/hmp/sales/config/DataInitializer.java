@@ -1,13 +1,16 @@
 package com.hmp.sales.config;
 
+import com.hmp.sales.user.entity.AuthProvider;
 import com.hmp.sales.user.entity.Permission;
 import com.hmp.sales.user.entity.Role;
 import com.hmp.sales.user.entity.RoleCode;
 import com.hmp.sales.user.entity.RolePermission;
+import com.hmp.sales.user.entity.User;
+import com.hmp.sales.user.entity.UserStatus;
 import com.hmp.sales.user.repository.PermissionRepository;
 import com.hmp.sales.user.repository.RolePermissionRepository;
 import com.hmp.sales.user.repository.RoleRepository;
-import lombok.RequiredArgsConstructor;
+import com.hmp.sales.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -36,12 +39,31 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final UserRepository userRepository;
+
+    /**
+     * Khởi tạo DataInitializer với các repository cần thiết để seed dữ liệu.
+     *
+     * @param roleRepository           repository quản lý vai trò
+     * @param permissionRepository     repository quản lý quyền hạn
+     * @param rolePermissionRepository repository liên kết quyền và vai trò
+     * @param userRepository           repository quản lý người dùng
+     */
+    public DataInitializer(
+            RoleRepository roleRepository,
+            PermissionRepository permissionRepository,
+            RolePermissionRepository rolePermissionRepository,
+            UserRepository userRepository) {
+        this.roleRepository = roleRepository;
+        this.permissionRepository = permissionRepository;
+        this.rolePermissionRepository = rolePermissionRepository;
+        this.userRepository = userRepository;
+    }
 
     @Override
     @Transactional
@@ -50,6 +72,7 @@ public class DataInitializer implements ApplicationRunner {
         seedRoles();
         seedPermissions();
         seedRolePermissions();
+        seedUsers();
         log.info("[DataInitializer] Khởi tạo dữ liệu hoàn tất.");
     }
 
@@ -215,6 +238,96 @@ public class DataInitializer implements ApplicationRunner {
                 rolePermissionRepository.save(rp);
                 log.info("[DataInitializer] Đã gán quyền {} cho vai trò {}.", permName, roleCode);
             }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Seed Users (10 người dùng mẫu phục vụ kiểm thử)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Khởi tạo 10 tài khoản người dùng mẫu phục vụ môi trường kiểm thử (idempotent).
+     * <p>
+     * Danh sách bao gồm các vai trò và trạng thái khác nhau:
+     * <ul>
+     *   <li>1 Admin (Active)</li>
+     *   <li>2 Manager (Active)</li>
+     *   <li>5 Customer (Active)</li>
+     *   <li>2 Customer (Locked - dùng kiểm thử tính năng lọc và mở khóa)</li>
+     * </ul>
+     * </p>
+     */
+    private void seedUsers() {
+        Role adminRole = roleRepository.findByRoleCodeAndIsDeletedFalse(RoleCode.ADMIN).orElse(null);
+        Role managerRole = roleRepository.findByRoleCodeAndIsDeletedFalse(RoleCode.MANAGER).orElse(null);
+        Role customerRole = roleRepository.findByRoleCodeAndIsDeletedFalse(RoleCode.CUSTOMER).orElse(null);
+
+        if (adminRole == null || managerRole == null || customerRole == null) {
+            log.warn("[DataInitializer] Thiếu vai trò hệ thống — không thể seed người dùng.");
+            return;
+        }
+
+        // Mật khẩu mẫu băm an toàn ($2a$10$...) cho tài khoản LOCAL: "Password@123"
+        String defaultPasswordHash = "$2a$10$wE44W7nL7jIuR26LdM2lYuvbZkH5Zl5J2P1L6c3kK9eB7uQ8aB6re";
+
+        // 1. Admin
+        seedUserIfAbsent("Nguyễn Văn Admin", "admin@hmp.vn", "0901234561",
+                defaultPasswordHash, AuthProvider.LOCAL, null, UserStatus.ACTIVE, adminRole);
+
+        // 2-3. Manager
+        seedUserIfAbsent("Trần Thị Quản Lý", "manager1@hmp.vn", "0901234562",
+                defaultPasswordHash, AuthProvider.LOCAL, null, UserStatus.ACTIVE, managerRole);
+        seedUserIfAbsent("Lê Hoàng Quản Lý", "manager2@hmp.vn", "0901234563",
+                defaultPasswordHash, AuthProvider.LOCAL, null, UserStatus.ACTIVE, managerRole);
+
+        // 4-8. Customer Active (Google OAuth)
+        seedUserIfAbsent("Phạm Minh Khách", "customer1@gmail.com", "0901234564",
+                null, AuthProvider.GOOGLE, "google_sub_001", UserStatus.ACTIVE, customerRole);
+        seedUserIfAbsent("Hoàng Đức Anh", "customer2@gmail.com", "0901234565",
+                null, AuthProvider.GOOGLE, "google_sub_002", UserStatus.ACTIVE, customerRole);
+        seedUserIfAbsent("Vũ Thu Trang", "customer3@gmail.com", "0901234566",
+                null, AuthProvider.GOOGLE, "google_sub_003", UserStatus.ACTIVE, customerRole);
+        seedUserIfAbsent("Đặng Tuấn Kiệt", "customer4@gmail.com", "0901234567",
+                null, AuthProvider.GOOGLE, "google_sub_004", UserStatus.ACTIVE, customerRole);
+        seedUserIfAbsent("Bùi Ngọc Hân", "customer5@gmail.com", "0901234568",
+                null, AuthProvider.GOOGLE, "google_sub_005", UserStatus.ACTIVE, customerRole);
+
+        // 9-10. Customer Locked (Dùng test chức năng khóa / mở khóa / lọc status)
+        seedUserIfAbsent("Ngô Gia Bảo", "customer6@gmail.com", "0901234569",
+                null, AuthProvider.GOOGLE, "google_sub_006", UserStatus.LOCKED, customerRole);
+        seedUserIfAbsent("Đỗ Thùy Dung", "customer7@gmail.com", "0901234570",
+                null, AuthProvider.GOOGLE, "google_sub_007", UserStatus.LOCKED, customerRole);
+    }
+
+    /**
+     * Lưu người dùng mới nếu email chưa tồn tại trong hệ thống.
+     *
+     * @param fullName        họ và tên
+     * @param email           địa chỉ email duy nhất
+     * @param phone           số điện thoại
+     * @param passwordHash    mật khẩu đã băm
+     * @param authProvider    nhà cung cấp xác thực (LOCAL/GOOGLE)
+     * @param providerSubject mã subject Google
+     * @param status          trạng thái tài khoản (ACTIVE/LOCKED)
+     * @param role            vai trò được gán
+     */
+    private void seedUserIfAbsent(String fullName, String email, String phone,
+                                  String passwordHash, AuthProvider authProvider,
+                                  String providerSubject, UserStatus status, Role role) {
+        if (!userRepository.existsByEmailAndIsDeletedFalse(email)) {
+            User user = User.builder()
+                    .fullName(fullName)
+                    .email(email)
+                    .phone(phone)
+                    .passwordHash(passwordHash)
+                    .authProvider(authProvider)
+                    .providerSubject(providerSubject)
+                    .status(status)
+                    .role(role)
+                    .isDeleted(false)
+                    .build();
+            userRepository.save(user);
+            log.info("[DataInitializer] Đã khởi tạo người dùng mẫu: {} ({}) - {}", fullName, email, role.getRoleCode());
         }
     }
 }

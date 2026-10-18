@@ -5,7 +5,6 @@ import com.hmp.sales.user.dto.RolePermissionsResponse;
 import com.hmp.sales.user.dto.UpdateRolePermissionsRequest;
 import com.hmp.sales.user.service.AdminRoleService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,10 +24,18 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/admin/roles")
-@RequiredArgsConstructor
 public class AdminRoleController {
 
     private final AdminRoleService adminRoleService;
+
+    /**
+     * Khởi tạo AdminRoleController với dependency AdminRoleService.
+     *
+     * @param adminRoleService service xử lý nghiệp vụ phân quyền vai trò
+     */
+    public AdminRoleController(AdminRoleService adminRoleService) {
+        this.adminRoleService = adminRoleService;
+    }
 
     /**
      * Lấy danh sách toàn bộ quyền hạn đang được gán cho một vai trò.

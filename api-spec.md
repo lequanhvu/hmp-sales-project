@@ -569,7 +569,7 @@ GET /api/v1/profiles
 ```json
 {
   "statusCode": 200,
-  "data": [
+  "data": {
     "result": [
       {
         "userId": 1001,
@@ -592,7 +592,7 @@ GET /api/v1/profiles
       "totalElements": 2,
       "totalPages": 1
     }
-  ],
+  },
   "message": "Thành công",
   "timestamp": "2026-10-01T10:00:00"
 }

@@ -2,9 +2,7 @@ package com.hmp.sales.user.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.io.Serializable;
@@ -16,8 +14,6 @@ import java.util.Objects;
 @Embeddable
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class RolePermissionId implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -33,6 +29,23 @@ public class RolePermissionId implements Serializable {
      */
     @Column(name = "permission_id")
     private Integer permissionId;
+
+    /**
+     * Constructor mặc định không tham số cho JPA.
+     */
+    public RolePermissionId() {
+    }
+
+    /**
+     * Constructor đầy đủ tham số cho RolePermissionId.
+     *
+     * @param roleId       ID của vai trò
+     * @param permissionId ID của quyền hạn
+     */
+    public RolePermissionId(Integer roleId, Integer permissionId) {
+        this.roleId = roleId;
+        this.permissionId = permissionId;
+    }
 
     @Override
     public boolean equals(Object o) {

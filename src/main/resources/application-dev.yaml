@@ -1,7 +1,7 @@
 spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/HMP-Sales}
-    username: ${DB_USERNAME:admin}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
   jpa:

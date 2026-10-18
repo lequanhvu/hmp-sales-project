@@ -1,6 +1,7 @@
 package com.hmp.sales.user.controller;
 
 import com.hmp.sales.common.response.ApiSuccessResponse;
+import com.hmp.sales.common.response.PageResponse;
 import com.hmp.sales.user.dto.CreateManagerRequest;
 import com.hmp.sales.user.dto.UserSearchRequest;
 import com.hmp.sales.user.dto.UserStatusResponse;
@@ -8,7 +9,6 @@ import com.hmp.sales.user.dto.UserSummaryResponse;
 import com.hmp.sales.user.entity.UserStatus;
 import com.hmp.sales.user.service.AdminUserService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,10 +25,18 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1/admin")
-@RequiredArgsConstructor
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+
+    /**
+     * Khởi tạo AdminUserController với dependency AdminUserService.
+     *
+     * @param adminUserService service xử lý nghiệp vụ quản trị người dùng
+     */
+    public AdminUserController(AdminUserService adminUserService) {
+        this.adminUserService = adminUserService;
+    }
 
     /**
      * Tìm kiếm và lọc danh sách người dùng với phân trang.
@@ -41,20 +49,20 @@ public class AdminUserController {
      * @param status lọc theo trạng thái (tùy chọn)
      * @param page   trang hiện tại (mặc định 0)
      * @param size   kích thước trang (mặc định 20)
-     * @return danh sách người dùng có phân trang
+     * @return danh sách người dùng có phân trang theo cấu trúc chuẩn
      */
     @GetMapping("/users")
     @PreAuthorize("hasAuthority('USER_LOCK')")
-    public ResponseEntity<ApiSuccessResponse<Page<UserSummaryResponse>>> listUsers(
+    public ResponseEntity<ApiSuccessResponse<PageResponse<UserSummaryResponse>>> listUsers(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) UserStatus status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "5") int size) {
         UserSearchRequest request = new UserSearchRequest(name, phone, email, status, page, size);
         Page<UserSummaryResponse> result = adminUserService.searchUsers(request);
-        return ResponseEntity.ok(ApiSuccessResponse.success(result));
+        return ResponseEntity.ok(ApiSuccessResponse.success(PageResponse.from(result)));
     }
 
     /**
