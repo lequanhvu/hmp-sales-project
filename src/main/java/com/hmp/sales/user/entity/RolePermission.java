@@ -22,8 +22,10 @@ import java.util.Objects;
 /**
  * Thực thể liên kết phân quyền giữa {@link Role} và {@link Permission}.
  * <p>
- * Lưu trữ tại bảng {@code role_permissions}. Cho phép Admin cấu hình linh hoạt quyền hạn
- * của từng vai trò (đặc biệt là quyền xem giá {@code PRODUCT_PRICE_VIEW} của Customer).
+ * Lưu trữ tại bảng {@code role_permissions}. Cho phép Admin cấu hình linh hoạt
+ * quyền hạn
+ * của từng vai trò (đặc biệt là quyền xem giá {@code PRODUCT_PRICE_VIEW} của
+ * Customer).
  */
 @Entity
 @Table(name = "role_permissions")
@@ -79,7 +81,7 @@ public class RolePermission {
     /**
      * Khởi tạo liên kết phân quyền giữa Role và Permission.
      *
-     * @param role vai trò cần gán quyền
+     * @param role       vai trò cần gán quyền
      * @param permission quyền hạn được gán
      */
     public RolePermission(Role role, Permission permission) {
@@ -87,8 +89,7 @@ public class RolePermission {
         this.permission = permission;
         this.id = new RolePermissionId(
                 role != null ? role.getId() : null,
-                permission != null ? permission.getId() : null
-        );
+                permission != null ? permission.getId() : null);
         this.isDeleted = false;
     }
 
@@ -111,8 +112,10 @@ public class RolePermission {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         RolePermission that = (RolePermission) o;
         return Objects.equals(id, that.id);
     }

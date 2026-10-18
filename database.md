@@ -505,7 +505,7 @@ Exact index strategy should be confirmed from query plans after implementation r
 - Soft delete: all durable tables include IsDeleted (BOOLEAN, default alse) for soft-deletion without breaking foreign key references or audit history.
 - Product: prefer status change over physical delete when referenced.
 - Category: do not delete a non-empty category without a defined child/product migration policy.
-- User: lock rather than delete business identities used in audit/history.
+- User: Admin can soft-delete a user by setting `IsDeleted = true`. Physical deletion is never performed. Historical order records remain intact and readable. Active access tokens (Redis) and all refresh tokens (PostgreSQL) for the deleted user are revoked at deletion time.
 - Order: never hard-delete ordinary business orders from normal admin flows.
 - OrderItem snapshots protect historical information.
 

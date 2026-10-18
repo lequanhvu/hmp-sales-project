@@ -35,6 +35,14 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
     List<RolePermission> findByIdRoleIdAndIsDeletedFalse(Integer roleId);
 
     /**
+     * Lấy toàn bộ danh sách liên kết phân quyền của một vai trò theo ID (bao gồm cả bản ghi bị xóa mềm).
+     *
+     * @param roleId định danh vai trò
+     * @return danh sách liên kết phân quyền
+     */
+    List<RolePermission> findByIdRoleId(Integer roleId);
+
+    /**
      * Tìm liên kết phân quyền cụ thể theo ID vai trò và ID quyền hạn.
      *
      * @param roleId định danh vai trò

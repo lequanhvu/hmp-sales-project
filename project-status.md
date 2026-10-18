@@ -66,10 +66,14 @@
 - ✅ **REST API specification completed** (`api-spec.md`):
   - Standard response format (`ApiSuccessResponse<T>`) and error envelope (`ApiErrorResponse<T>`).
   - Public catalog APIs, Google auth & token APIs, Customer profile/address/order APIs, Manager catalog/order processing APIs, Admin user/role/setting/audit APIs.
-- ✅ **Project rules & instructions established**:
-  - `AGENTS.md` and `.agents/rules/project-rules.md` (technology baseline, coding rules, Redis/PostgreSQL rules, testing rules).
-- ✅ **AI workflow setup**:
-  - Custom agent command templates configured in `.agents/commands/`.
+- ✅ **Phase 1 — Identity, Roles & Permissions completed**:
+  - `Role`, `Permission`, `RolePermission`, `User` entities & JPA repositories with integration tests.
+  - `DataInitializer` startup component: idempotent seed for default Roles, Permissions, and Role-Permission mappings.
+  - `PermissionEvaluationService` (`permEval` bean) for dynamic SpEL permission checks from JWT authorities without DB round-trips.
+  - `SystemLogService` stub logging audit operations.
+  - `AdminUserService` & `AdminUserController`: user pagination/search, account locking/unlocking, soft-delete with token revocation, and Google-based Manager provisioning.
+  - `AdminRoleService` & `AdminRoleController`: view role permissions, replace-all permission updates, and forced token revocation flow (Section 18).
+  - Comprehensive unit & integration tests (55 passing tests).
 
 ## In Progress
 _Nothing._
@@ -96,9 +100,10 @@ _Nothing._
 - ⚠️ **Scope Protection**: Do NOT implement V1 excluded modules (payment gateways, promotions, reviews, inventory, quotation, warranty, laser cutting, blogs).
 
 ## Next Tasks
-1. **[P1]** Implement Phase 1: Seed data / migration and permission evaluation service for dynamic `PRODUCT_PRICE_VIEW`.
-2. **[P1]** Implement Phase 1: Admin User management service & APIs (search, lock/unlock accounts, create Manager).
-3. **[P1]** Implement Phase 1: Admin Role & Permission management APIs (toggle `PRODUCT_PRICE_VIEW` for Customer).
+1. **[P1]** Implement Phase 2: Google OAuth token verification & user account resolution (`POST /api/v1/auth/google`).
+2. **[P1]** Implement Phase 2: JWT token generation service (embed roles & permissions, register `auth:access:{jti}` in Redis).
+3. **[P1]** Implement Phase 2: RefreshToken entity, repository & rotation mechanism with token family reuse detection.
+4. **[P1]** Implement Phase 2: Redis phone OTP service with rate limiting and single-use verification.
 
 ## Milestones
 
@@ -119,10 +124,10 @@ _Nothing._
 - [x] RolePermission join entity & repository
 - [x] User entity & repository (supporting `GOOGLE` and `LOCAL` auth providers, `ACTIVE`/`LOCKED` status)
 - [x] User unique constraints (`Email`, `(AuthProvider, ProviderSubject)`)
-- [ ] Role & Permission initial seed data / migration
-- [ ] Permission evaluation service / custom authorization manager for dynamic permission checks
-- [ ] Admin User management service & APIs (search, lock/unlock accounts, create Manager)
-- [ ] Admin Role & Permission management APIs (toggle `PRODUCT_PRICE_VIEW` for Customer)
+- [x] Role & Permission initial seed data / migration (`DataInitializer` idempotent startup runner)
+- [x] Permission evaluation service / custom authorization manager for dynamic permission checks (`PermissionEvaluationService`)
+- [x] Admin User management service & APIs (search, lock/unlock accounts, soft-delete, create Manager)
+- [x] Admin Role & Permission management APIs (view/update role permissions with forced token revocation flow)
 
 ### Phase 2 — Authentication, Tokens & OTP
 - [ ] Google OAuth token verification service & user account resolution (idempotent mapping)

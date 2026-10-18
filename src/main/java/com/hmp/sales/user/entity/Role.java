@@ -28,11 +28,12 @@ import java.util.Set;
 /**
  * Thực thể đại diện cho vai trò người dùng trong hệ thống (Role).
  * <p>
- * Lưu trữ tại bảng {@code roles}, chứa các vai trò chính như ADMIN, MANAGER, CUSTOMER.
+ * Lưu trữ tại bảng {@code roles}, chứa các vai trò chính như ADMIN, MANAGER,
+ * CUSTOMER.
  */
 @Entity
 @Table(name = "roles", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_roles_role_code", columnNames = {"role_code"})
+        @UniqueConstraint(name = "uk_roles_role_code", columnNames = { "role_code" })
 })
 @Getter
 @Setter
@@ -110,8 +111,10 @@ public class Role {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         Role role = (Role) o;
         return roleCode == role.roleCode;
     }

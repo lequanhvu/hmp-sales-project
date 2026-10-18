@@ -525,6 +525,59 @@ Request product
 
 Do not implement this as a hard-coded `role == CUSTOMER` rule.
 
+## 18. Flow: Permission change → Forced token revocation
+
+Permissions are embedded into the JWT at login time and cached in the token. This is the chosen approach for performance (no DB query per request).
+
+Consequence: when Admin updates the permissions of a Role, existing tokens for users of that role become stale (still carry the old permissions).
+
+### Forced revocation flow (triggered by Admin on `PUT /api/v1/admin/roles/{roleId}/permissions`)
+
+```text
+Admin saves new permissions for Role R
+         |
+         v
+ Atomically in one transaction:
+   1. Replace RolePermission records for Role R (PostgreSQL)
+   2. Log the change in SystemLog (PostgreSQL)
+         |
+         v
+ Post-transaction cleanup (best-effort, non-blocking):
+   3. Find all active Users with Role R
+         |
+         v
+   4. For each such User:
+        a. Find all active RefreshToken rows -> mark IsRevoked = true (PostgreSQL)
+        b. Find linked AccessTokenJti values -> DEL auth:access:{jti} from Redis
+         |
+         v
+   5. Return 200 to Admin
+```
+
+### Affected users behavior
+
+```text
+User with Role R makes next request
+         |
+         v
+JWT signature valid, BUT
+         |
+         v
+Redis auth:access:{jti} -> MISSING (revoked in step 4b)
+         |
+         v
+RedisTokenValidationFilter -> 401 Unauthorized
+         |
+         v
+User must log in again -> new JWT with updated permissions
+```
+
+### Reliability note
+
+The token-revocation step (4) runs after the DB transaction commits. If the process crashes between step 2 and step 4, some tokens may remain briefly active until their natural TTL expiry (max 15 minutes). This is an acceptable tradeoff for V1.
+
+Do not embed permissions in the JWT in a way that prevents this revocation path.
+
 ## 19. Flow: notifications
 
 Required channels: website, Zalo, email.

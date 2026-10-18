@@ -4,6 +4,7 @@ import com.hmp.sales.user.entity.AuthProvider;
 import com.hmp.sales.user.entity.RoleCode;
 import com.hmp.sales.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -15,7 +16,7 @@ import java.util.Optional;
  * Repository truy xuất dữ liệu thực thể người dùng {@link User}.
  */
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
 
     /**
      * Tìm người dùng theo địa chỉ email.
