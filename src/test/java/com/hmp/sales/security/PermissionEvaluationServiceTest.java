@@ -3,6 +3,9 @@ package com.hmp.sales.security;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -12,15 +15,20 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 @DisplayName("PermissionEvaluationService Tests")
 class PermissionEvaluationServiceTest {
+
+    @Mock
+    private PermissionAuthorizationManager permissionAuthorizationManager;
 
     private PermissionEvaluationService permissionEvaluationService;
 
     @BeforeEach
     void setUp() {
-        permissionEvaluationService = new PermissionEvaluationServiceImpl();
+        permissionEvaluationService = new PermissionEvaluationServiceImpl(permissionAuthorizationManager);
     }
 
     @Test
@@ -43,55 +51,56 @@ class PermissionEvaluationServiceTest {
     }
 
     @Test
-    @DisplayName("hasPermission: trả về true khi JWT authorities chứa quyền tương ứng")
-    void hasPermission_ContainsPermission_ReturnsTrue() {
+    @DisplayName("hasPermission: trả về true khi vai trò của user có quyền trong cache RAM")
+    void hasPermission_RoleHasPermissionInCache_ReturnsTrue() {
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 "user-1", "token",
-                List.of(
-                        new SimpleGrantedAuthority("ROLE_CUSTOMER"),
-                        new SimpleGrantedAuthority("PRODUCT_PRICE_VIEW"),
-                        new SimpleGrantedAuthority("ORDER_CREATE")
-                )
+                List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
         );
+
+        when(permissionAuthorizationManager.hasPermission(auth, "PRODUCT_PRICE_VIEW")).thenReturn(true);
 
         boolean result = permissionEvaluationService.hasPermission(auth, "PRODUCT_PRICE_VIEW");
         assertThat(result).isTrue();
     }
 
     @Test
-    @DisplayName("hasPermission: trả về false khi authorities không chứa quyền cần kiểm tra")
-    void hasPermission_DoesNotContainPermission_ReturnsFalse() {
+    @DisplayName("hasPermission: trả về false khi vai trò của user không có quyền trong cache RAM")
+    void hasPermission_RoleDoesNotHavePermissionInCache_ReturnsFalse() {
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 "user-1", "token",
-                List.of(
-                        new SimpleGrantedAuthority("ROLE_CUSTOMER"),
-                        new SimpleGrantedAuthority("ORDER_CREATE")
-                )
+                List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
         );
+
+        when(permissionAuthorizationManager.hasPermission(auth, "PRODUCT_PRICE_VIEW")).thenReturn(false);
 
         boolean result = permissionEvaluationService.hasPermission(auth, "PRODUCT_PRICE_VIEW");
         assertThat(result).isFalse();
     }
 
     @Test
-    @DisplayName("canViewProductPrice: trả về true khi caller có quyền PRODUCT_PRICE_VIEW")
+    @DisplayName("canViewProductPrice: trả về true khi caller có quyền PRODUCT_PRICE_VIEW trong cache")
     void canViewProductPrice_HasPermission_ReturnsTrue() {
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 "user-1", "token",
-                List.of(new SimpleGrantedAuthority("PRODUCT_PRICE_VIEW"))
+                List.of(new SimpleGrantedAuthority("ROLE_MANAGER"))
         );
+
+        when(permissionAuthorizationManager.hasPermission(auth, "PRODUCT_PRICE_VIEW")).thenReturn(true);
 
         boolean result = permissionEvaluationService.canViewProductPrice(auth);
         assertThat(result).isTrue();
     }
 
     @Test
-    @DisplayName("canViewProductPrice: trả về false khi caller không có quyền PRODUCT_PRICE_VIEW")
+    @DisplayName("canViewProductPrice: trả về false khi caller không có quyền PRODUCT_PRICE_VIEW trong cache")
     void canViewProductPrice_NoPermission_ReturnsFalse() {
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 "user-1", "token",
-                Collections.emptyList()
+                List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"))
         );
+
+        when(permissionAuthorizationManager.hasPermission(auth, "PRODUCT_PRICE_VIEW")).thenReturn(false);
 
         boolean result = permissionEvaluationService.canViewProductPrice(auth);
         assertThat(result).isFalse();

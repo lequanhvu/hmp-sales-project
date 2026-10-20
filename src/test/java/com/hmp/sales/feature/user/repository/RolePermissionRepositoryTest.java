@@ -96,4 +96,44 @@ class RolePermissionRepositoryTest {
         boolean hasPriceView = rolePermissionRepository.hasPermission(role.getId(), "PRODUCT_PRICE_VIEW");
         assertThat(hasPriceView).isFalse();
     }
+
+    @Test
+    @DisplayName("findAllActiveRolePermissions: Lấy danh sách liên kết hoạt động và bỏ qua bản ghi bị xóa mềm")
+    void findAllActiveRolePermissions_ReturnsOnlyActive() {
+        Role role = Role.builder().roleCode(RoleCode.MANAGER).roleName("Quản lý").build();
+        entityManager.persist(role);
+
+        Permission perm1 = Permission.builder()
+                .permissionName("PRODUCT_CREATE")
+                .apiPath("/api/v1/manager/products")
+                .method("POST")
+                .module("PRODUCT")
+                .build();
+        entityManager.persist(perm1);
+
+        Permission perm2 = Permission.builder()
+                .permissionName("PRODUCT_DELETE")
+                .apiPath("/api/v1/manager/products/{id}")
+                .method("DELETE")
+                .module("PRODUCT")
+                .build();
+        entityManager.persist(perm2);
+
+        RolePermission activeRp = new RolePermission(role, perm1);
+        activeRp.setIsDeleted(false);
+        entityManager.persist(activeRp);
+
+        RolePermission deletedRp = new RolePermission(role, perm2);
+        deletedRp.setIsDeleted(true);
+        entityManager.persist(deletedRp);
+
+        entityManager.flush();
+        entityManager.clear();
+
+        List<RolePermission> result = rolePermissionRepository.findAllActiveRolePermissions();
+
+        assertThat(result).extracting(rp -> rp.getPermission().getPermissionName())
+                .contains("PRODUCT_CREATE")
+                .doesNotContain("PRODUCT_DELETE");
+    }
 }

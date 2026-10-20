@@ -49,7 +49,6 @@ public class RoleController {
      * @return danh sách tên các quyền hạn của vai trò
      */
     @GetMapping("/{roleId}/permissions")
-    @PreAuthorize("hasAuthority('ROLE_PERMISSION_UPDATE')")
     public ResponseEntity<ApiSuccessResponse<RolePermissionsResponse>> getRolePermissions(
             @PathVariable Integer roleId) {
         RolePermissionsResponse response = roleService.getRolePermissions(roleId);
@@ -70,7 +69,6 @@ public class RoleController {
      * @return danh sách quyền hạn mới cập nhật của vai trò
      */
     @PutMapping("/{roleId}/permissions")
-    @PreAuthorize("hasAuthority('ROLE_PERMISSION_UPDATE')")
     public ResponseEntity<ApiSuccessResponse<RolePermissionsResponse>> updateRolePermissions(
             @PathVariable Integer roleId,
             @RequestBody @Valid UpdateRolePermissionsRequest request,

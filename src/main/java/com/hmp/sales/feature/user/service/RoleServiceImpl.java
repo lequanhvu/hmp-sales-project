@@ -46,6 +46,7 @@ public class RoleServiceImpl implements RoleService {
     private final UserRepository userRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final SystemLogService systemLogService;
+    private final com.hmp.sales.security.PermissionAuthorizationManager permissionAuthorizationManager;
 
     public RoleServiceImpl(
             RoleRepository roleRepository,
@@ -53,13 +54,15 @@ public class RoleServiceImpl implements RoleService {
             RolePermissionRepository rolePermissionRepository,
             UserRepository userRepository,
             StringRedisTemplate stringRedisTemplate,
-            SystemLogService systemLogService) {
+            SystemLogService systemLogService,
+            com.hmp.sales.security.PermissionAuthorizationManager permissionAuthorizationManager) {
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.userRepository = userRepository;
         this.stringRedisTemplate = stringRedisTemplate;
         this.systemLogService = systemLogService;
+        this.permissionAuthorizationManager = permissionAuthorizationManager;
     }
 
     /**
@@ -152,8 +155,12 @@ public class RoleServiceImpl implements RoleService {
             rolePermissionRepository.saveAll(toSave);
         }
 
-        // 3. Forced Token Revocation: Tìm toàn bộ user thuộc vai trò này để vô hiệu hóa
-        // token
+        // 3. Cập nhật lại bộ nhớ đệm RAM phân quyền ngay lập tức (Cache Invalidation)
+        if (permissionAuthorizationManager != null) {
+            permissionAuthorizationManager.loadCache();
+        }
+
+        // 4. Forced Token Revocation: Tìm toàn bộ user thuộc vai trò này để vô hiệu hóa token
         revokeTokensForRole(role);
 
         // 4. Ghi nhật ký kiểm toán hệ thống

@@ -52,7 +52,6 @@ public class UserController {
      * @return danh sách người dùng có phân trang theo cấu trúc chuẩn
      */
     @GetMapping("/users")
-    @PreAuthorize("hasAuthority('USER_LOCK')")
     public ResponseEntity<ApiSuccessResponse<PageResponse<UserSummaryResponse>>> listUsers(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String phone,
@@ -75,7 +74,6 @@ public class UserController {
      * @return trạng thái tài khoản sau khi khóa
      */
     @PostMapping("/users/{userId}/lock")
-    @PreAuthorize("hasAuthority('USER_LOCK')")
     public ResponseEntity<ApiSuccessResponse<UserStatusResponse>> lockUser(
             @PathVariable Long userId,
             @AuthenticationPrincipal Jwt jwt) {
@@ -94,7 +92,6 @@ public class UserController {
      * @return trạng thái tài khoản sau khi mở khóa
      */
     @PostMapping("/users/{userId}/unlock")
-    @PreAuthorize("hasAuthority('USER_UNLOCK')")
     public ResponseEntity<ApiSuccessResponse<UserStatusResponse>> unlockUser(
             @PathVariable Long userId,
             @AuthenticationPrincipal Jwt jwt) {
@@ -114,7 +111,6 @@ public class UserController {
      * @return xác nhận xóa thành công
      */
     @DeleteMapping("/users/{userId}")
-    @PreAuthorize("hasAuthority('MANAGER_CREATE')")
     public ResponseEntity<ApiSuccessResponse<Void>> deleteUser(
             @PathVariable Long userId,
             @AuthenticationPrincipal Jwt jwt) {
@@ -134,7 +130,6 @@ public class UserController {
      * @return thông tin tóm tắt tài khoản Manager vừa tạo
      */
     @PostMapping("/managers")
-    @PreAuthorize("hasAuthority('MANAGER_CREATE')")
     public ResponseEntity<ApiSuccessResponse<UserSummaryResponse>> createManager(
             @RequestBody @Valid CreateManagerRequest request,
             @AuthenticationPrincipal Jwt jwt) {

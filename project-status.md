@@ -1,6 +1,6 @@
 # Project Status
 
-> Last updated: 2026-10-18 | By: @antigravity | Session: #3
+> Last updated: 2026-10-21 | By: @antigravity | Session: #4
 >
 > AI: update this file at the end of every session when asked.
 > Follow this exact format. Preserve full milestone checklists and project specifications.
@@ -9,13 +9,13 @@
 
 ## Completed
 - ✅ **Phase 1 — Identity, Roles & Permissions (Task 1 & Task 2 completed)**:
-  - JPA Entities configured in `com.hmp.sales.user.entity`:
+  - JPA Entities configured in `com.hmp.sales.feature.user.entity`:
     - `Role` (bảng `roles`, khóa chính `role_id`, ràng buộc duy nhất trên `role_code`, cờ `is_deleted`, audit timestamps).
     - `Permission` (bảng `permissions`, khóa chính `permission_id`, `permission_name` duy nhất, ràng buộc `(api_path, method)`, phân hệ `module`, cờ `is_deleted`, audit timestamps).
     - `RolePermission` (bảng liên kết `role_permissions`, composite key `RolePermissionId`, hỗ trợ phân quyền động `PRODUCT_PRICE_VIEW`).
     - `User` (bảng `users`, khóa chính `user_id`, hỗ trợ `GOOGLE` và `LOCAL`, `ACTIVE`/`LOCKED`, ràng buộc duy nhất `email` và `(auth_provider, provider_subject)`).
   - Enums: `RoleCode` (`ADMIN`, `MANAGER`, `CUSTOMER`), `AuthProvider` (`GOOGLE`, `LOCAL`), `UserStatus` (`ACTIVE`, `LOCKED`).
-  - Spring Data JPA Repositories in `com.hmp.sales.user.repository`:
+  - Spring Data JPA Repositories in `com.hmp.sales.feature.user.repository`:
     - `RoleRepository`: tìm theo `roleCode`, lọc `isDeleted = false`.
     - `PermissionRepository`: tìm theo `permissionName`, `apiPath` + `method`, lọc theo module.
     - `RolePermissionRepository`: tìm quyền theo role (`findPermissionsByRoleId`), kiểm tra quyền nhanh (`hasPermission`).
@@ -73,7 +73,13 @@
   - `SystemLogService` stub logging audit operations.
   - `AdminUserService` & `AdminUserController`: user pagination/search, account locking/unlocking, soft-delete with token revocation, and Google-based Manager provisioning.
   - `AdminRoleService` & `AdminRoleController`: view role permissions, replace-all permission updates, and forced token revocation flow (Section 18).
-  - Comprehensive unit & integration tests (55 passing tests).
+  - Refactor: Triển khai kiến trúc **Dynamic In-Memory Permission Authorization**:
+    - `PermissionAuthorizationManager` implements `AuthorizationManager<RequestAuthorizationContext>`: nạp cache singleton `rolePermissionsCache` vào RAM khi khởi động.
+    - So khớp quyền động qua `AntPathMatcher` dựa trên `(apiPath, method)` của quyền thuộc vai trò trong cache.
+    - Tích hợp `anyRequest().access(permissionAuthorizationManager)` vào `SecurityConfig`.
+    - Tự động làm mới cache (cache invalidation) qua `loadCache()` trong `RoleServiceImpl` và `DataInitializer`.
+    - Cập nhật `PermissionEvaluationService` tra cứu quyền động từ cache RAM cho các logic nghiệp vụ lọc dữ liệu (như `PRODUCT_PRICE_VIEW`).
+  - Toàn bộ 66/66 unit và integration tests pass (11 test cases mới: `PermissionAuthorizationManagerTest`, `RolePermissionRepositoryTest`, `PermissionEvaluationServiceTest`).
 
 ## In Progress
 _Nothing._

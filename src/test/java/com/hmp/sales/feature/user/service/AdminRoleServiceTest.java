@@ -58,6 +58,9 @@ class AdminRoleServiceTest {
         @Mock
         private SystemLogService systemLogService;
 
+        @Mock
+        private com.hmp.sales.security.PermissionAuthorizationManager permissionAuthorizationManager;
+
         private RoleServiceImpl adminRoleService;
 
         private Role customerRole;
@@ -72,7 +75,8 @@ class AdminRoleServiceTest {
                                 rolePermissionRepository,
                                 userRepository,
                                 stringRedisTemplate,
-                                systemLogService);
+                                systemLogService,
+                                permissionAuthorizationManager);
                 customerRole = Role.builder()
                                 .id(3)
                                 .roleCode(RoleCode.CUSTOMER)
@@ -142,6 +146,7 @@ class AdminRoleServiceTest {
                 assertThat(response.permissions()).containsExactlyInAnyOrder("PRODUCT_PRICE_VIEW", "ORDER_CREATE");
 
                 verify(rolePermissionRepository).saveAll(anyList());
+                verify(permissionAuthorizationManager).loadCache();
                 verify(systemLogService).log(eq(999L), eq("ROLE_PERMISSIONS_UPDATED"), eq("ROLE"), eq(3L), any());
         }
 

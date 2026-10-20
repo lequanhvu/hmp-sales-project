@@ -43,7 +43,7 @@ Do not introduce a new framework or infrastructure component without a concrete 
 
 ## 3. Package Structure
 
-Use feature-oriented modules with clear technical layers:
+Use feature-oriented modules with clear technical layers. Cross-cutting packages (`common`, `config`, `security`) reside at the root, while all business domain modules reside inside the `feature` package:
 
 ```text
 com.<company>.<project>
@@ -54,17 +54,18 @@ com.<company>.<project>
 │   └── util
 ├── config
 ├── security
-├── auth
-├── user
-├── category
-├── product
-├── order
-├── notification
-├── systemlog
-└── setting
+└── feature
+    ├── auth
+    ├── category
+    ├── notification
+    ├── order
+    ├── product
+    ├── setting
+    ├── systemlog
+    └── user
 ```
 
-A feature may contain only the packages it actually needs:
+A feature package under `feature/` may contain only the technical layers it actually needs:
 
 ```text
 controller/
@@ -131,7 +132,10 @@ Never accidentally expose protected fields such as:
 - Authorization must be enforced on the backend; frontend hiding is not security.
 - Use roles for coarse-grained access control.
 - Use permissions for configurable actions.
-- Product price visibility MUST be controlled by the `PRODUCT_PRICE_VIEW` permission.
+- JWT Access Token only stores user roles claim (e.g. `["ROLE_ADMIN"]`, `["ROLE_CUSTOMER"]`), avoiding token bloat by omitting permissions.
+- Permissions are cached in RAM via `PermissionAuthorizationManager` (Singleton) and matched dynamically using `AntPathMatcher` on `(apiPath, method)`.
+- When Role permissions are updated in the database, `permissionAuthorizationManager.loadCache()` must be invoked immediately to invalidate and synchronize the RAM cache.
+- Product price visibility MUST be controlled by the `PRODUCT_PRICE_VIEW` permission evaluated dynamically via `PermissionEvaluationService`.
 - Do not hard-code a permanent rule such as `CUSTOMER cannot see price`.
 - A locked account must not be allowed to use protected functionality according to the security policy.
 - Refresh tokens are opaque values stored durably in PostgreSQL as hashes and are rotated on every successful refresh.

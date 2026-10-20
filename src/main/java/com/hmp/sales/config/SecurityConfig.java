@@ -1,5 +1,6 @@
 package com.hmp.sales.config;
 
+import com.hmp.sales.security.PermissionAuthorizationManager;
 import com.hmp.sales.security.RedisTokenValidationFilter;
 import com.hmp.sales.security.RestAccessDeniedHandler;
 import com.hmp.sales.security.RestAuthenticationEntryPoint;
@@ -62,65 +63,55 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
     private final RedisTokenValidationFilter redisTokenValidationFilter;
+    private final PermissionAuthorizationManager permissionAuthorizationManager;
 
     /**
      * Khởi tạo cấu hình bảo mật với các phụ thuộc cần thiết.
      *
-     * @param appProperties              chứa các tham số cấu hình hệ thống (JWT,
-     *                                   CORS, OTP)
-     * @param authenticationEntryPoint   xử lý phản hồi khi chưa xác thực (401
-     *                                   Unauthorized)
-     * @param accessDeniedHandler        xử lý phản hồi khi không đủ quyền hạn (403
-     *                                   Forbidden)
-     * @param redisTokenValidationFilter bộ lọc kiểm tra trạng thái hoạt động của
-     *                                   token trên Redis
+     * @param appProperties                  chứa các tham số cấu hình hệ thống (JWT, CORS, OTP)
+     * @param authenticationEntryPoint       xử lý phản hồi khi chưa xác thực (401 Unauthorized)
+     * @param accessDeniedHandler            xử lý phản hồi khi không đủ quyền hạn (403 Forbidden)
+     * @param redisTokenValidationFilter     bộ lọc kiểm tra trạng thái hoạt động của token trên Redis
+     * @param permissionAuthorizationManager bộ quản lý phân quyền động phía server từ cache RAM
      */
     public SecurityConfig(
             AppProperties appProperties,
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler,
-            RedisTokenValidationFilter redisTokenValidationFilter) {
+            RedisTokenValidationFilter redisTokenValidationFilter,
+            PermissionAuthorizationManager permissionAuthorizationManager) {
         this.appProperties = appProperties;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.redisTokenValidationFilter = redisTokenValidationFilter;
+        this.permissionAuthorizationManager = permissionAuthorizationManager;
     }
 
     /**
-     * Thiết lập chuỗi các bộ lọc bảo mật (Security Filter Chain) chính của ứng
-     * dụng.
+     * Thiết lập chuỗi các bộ lọc bảo mật (Security Filter Chain) chính của ứng dụng.
      * <p>
      * Cấu hình bao gồm:
      * <ul>
-     * <li>Vô hiệu hóa CSRF do hệ thống xây dựng theo mô hình REST API stateless sử
-     * dụng JWT.</li>
-     * <li>Kích hoạt CORS theo chính sách cấu hình trong file
-     * {@code application.yaml}.</li>
-     * <li>Thiết lập Session Policy là {@code STATELESS} (không lưu phiên đăng nhập
-     * trong HttpSession).</li>
-     * <li>Cấu hình xử lý ngoại lệ tập trung cho 401 và 403 bằng các REST handler
-     * tùy biến.</li>
-     * <li>Phân quyền URL: Mở công khai các endpoint tra cứu, bắt buộc xác thực với
-     * các thao tác dữ liệu.</li>
-     * <li>Đăng ký OAuth2 Resource Server để giải mã và xác minh chữ ký Bearer
-     * JWT.</li>
-     * <li>Gắn bộ lọc {@link RedisTokenValidationFilter} ngay sau bộ lọc xác thực
-     * token của Spring
+     * <li>Vô hiệu hóa CSRF do hệ thống xây dựng theo mô hình REST API stateless sử dụng JWT.</li>
+     * <li>Kích hoạt CORS theo chính sách cấu hình trong file {@code application.yaml}.</li>
+     * <li>Thiết lập Session Policy là {@code STATELESS} (không lưu phiên đăng nhập trong HttpSession).</li>
+     * <li>Cấu hình xử lý ngoại lệ tập trung cho 401 và 403 bằng các REST handler tùy biến.</li>
+     * <li>Phân quyền URL: Mở công khai các endpoint tra cứu trong whitelist, tất cả request còn lại
+     * kiểm tra quyền động qua {@link PermissionAuthorizationManager}.</li>
+     * <li>Đăng ký OAuth2 Resource Server để giải mã và xác minh chữ ký Bearer JWT.</li>
+     * <li>Gắn bộ lọc {@link RedisTokenValidationFilter} ngay sau bộ lọc xác thực token của Spring
      * để kiểm tra xem token có bị thu hồi trên Redis hay không.</li>
      * </ul>
      * </p>
      *
-     * @param http đối tượng cấu hình bảo mật {@link HttpSecurity} của Spring
-     *             Security
-     * @return chuỗi lọc bảo mật {@link SecurityFilterChain} đã được đóng gói hoàn
-     *         chỉnh
+     * @param http đối tượng cấu hình bảo mật {@link HttpSecurity} của Spring Security
+     * @return chuỗi lọc bảo mật {@link SecurityFilterChain} đã được đóng gói hoàn chỉnh
      * @throws Exception nếu xảy ra lỗi trong quá trình khởi tạo cấu hình bảo mật
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Tắt CSRF vì REST API giao tiếp qua Header Authorization (stateless), không
-                // dùng Cookie session
+                // Tắt CSRF vì REST API giao tiếp qua Header Authorization (stateless), không dùng Cookie session
                 .csrf(AbstractHttpConfigurer::disable)
                 // Kích hoạt cấu hình CORS từ bean corsConfigurationSource()
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -132,18 +123,14 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 // Cấu hình quy tắc phân quyền cho các endpoint HTTP
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép tất cả request OPTIONS (Pre-flight request của trình duyệt khi gọi
-                        // CORS)
+                        // Cho phép tất cả request OPTIONS (Pre-flight request của trình duyệt khi gọi CORS)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Cho phép truy cập không cần token vào các endpoint trong danh sách WHITELIST
                         .requestMatchers(WHITELIST).permitAll()
-                        // Cho phép người dùng chưa đăng nhập chỉ xem danh mục và sản phẩm (phương thức
-                        // GET)
+                        // Cho phép người dùng chưa đăng nhập chỉ xem danh mục và sản phẩm (phương thức GET)
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_WHITELIST).permitAll()
-                        // Tất cả các request còn lại đều bắt buộc phải đăng nhập (yêu cầu Bearer Token
-                        // hợp lệ)
-                        // .anyRequest().authenticated()
-                        .anyRequest().permitAll())
+                        // Tất cả các request còn lại được kiểm tra quyền động qua PermissionAuthorizationManager
+                        .anyRequest().access(permissionAuthorizationManager))
                 // Cấu hình Spring Security đóng vai trò OAuth2 Resource Server nhận Bearer
                 // Token (JWT)
                 .oauth2ResourceServer(oauth2 -> oauth2

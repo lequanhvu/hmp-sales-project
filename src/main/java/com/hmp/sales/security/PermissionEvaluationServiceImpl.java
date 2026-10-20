@@ -19,24 +19,35 @@ public class PermissionEvaluationServiceImpl implements PermissionEvaluationServ
 
     private static final String PRODUCT_PRICE_VIEW = "PRODUCT_PRICE_VIEW";
 
+    private final PermissionAuthorizationManager permissionAuthorizationManager;
+
+    /**
+     * Khởi tạo service đánh giá quyền với PermissionAuthorizationManager.
+     *
+     * @param permissionAuthorizationManager bộ quản lý quyền hạn động trên RAM
+     */
+    public PermissionEvaluationServiceImpl(PermissionAuthorizationManager permissionAuthorizationManager) {
+        this.permissionAuthorizationManager = permissionAuthorizationManager;
+    }
+
     /**
      * {@inheritDoc}
      * <p>
-     * Tìm kiếm {@code permissionName} trong danh sách {@code GrantedAuthority} của authentication.
-     * Spring Security lưu authorities dưới dạng chuỗi (ví dụ: {@code "PRODUCT_PRICE_VIEW"}).
+     * Tra cứu quyền hạn của người dùng từ bộ nhớ đệm RAM thông qua
+     * {@link PermissionAuthorizationManager} dựa trên danh sách vai trò (Role)
+     * có trong thông tin xác thực {@link Authentication}.
      *
-     * @param authentication đối tượng xác thực hiện tại
-     * @param permissionName tên quyền cần kiểm tra
-     * @return {@code true} nếu quyền có trong danh sách authorities
+     * @param authentication đối tượng xác thực hiện tại (chứa danh sách roles)
+     * @param permissionName tên quyền cần kiểm tra (ví dụ: {@code "PRODUCT_PRICE_VIEW"})
+     * @return {@code true} nếu bất kỳ vai trò nào của người dùng sở hữu quyền này trong cache
      */
     @Override
     public boolean hasPermission(Authentication authentication, String permissionName) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return false;
         }
-        return authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(permissionName::equals);
+
+        return permissionAuthorizationManager.hasPermission(authentication, permissionName);
     }
 
     /**

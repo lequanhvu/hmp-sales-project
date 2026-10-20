@@ -76,4 +76,18 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
             "AND rp.isDeleted = false " +
             "AND rp.permission.isDeleted = false")
     boolean hasPermission(@Param("roleId") Integer roleId, @Param("permissionName") String permissionName);
+
+    /**
+     * Lấy toàn bộ danh sách liên kết phân quyền đang hoạt động kèm theo Role và Permission.
+     * Sử dụng JOIN FETCH để eager load các thực thể liên quan, dùng nạp vào bộ nhớ RAM khi ứng dụng khởi động.
+     *
+     * @return danh sách các liên kết phân quyền hợp lệ chưa bị xóa mềm
+     */
+    @Query("SELECT rp FROM RolePermission rp " +
+            "JOIN FETCH rp.role r " +
+            "JOIN FETCH rp.permission p " +
+            "WHERE rp.isDeleted = false " +
+            "AND r.isDeleted = false " +
+            "AND p.isDeleted = false")
+    List<RolePermission> findAllActiveRolePermissions();
 }

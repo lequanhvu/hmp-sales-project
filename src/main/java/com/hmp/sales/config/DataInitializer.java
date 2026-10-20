@@ -45,24 +45,28 @@ public class DataInitializer implements ApplicationRunner {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final UserRepository userRepository;
+    private final com.hmp.sales.security.PermissionAuthorizationManager permissionAuthorizationManager;
 
     /**
-     * Khởi tạo DataInitializer với các repository cần thiết để seed dữ liệu.
+     * Khởi tạo DataInitializer với các repository và manager cần thiết để seed dữ liệu.
      *
-     * @param roleRepository           repository quản lý vai trò
-     * @param permissionRepository     repository quản lý quyền hạn
-     * @param rolePermissionRepository repository liên kết quyền và vai trò
-     * @param userRepository           repository quản lý người dùng
+     * @param roleRepository                 repository quản lý vai trò
+     * @param permissionRepository           repository quản lý quyền hạn
+     * @param rolePermissionRepository       repository liên kết quyền và vai trò
+     * @param userRepository                 repository quản lý người dùng
+     * @param permissionAuthorizationManager bộ quản lý phân quyền động trên RAM
      */
     public DataInitializer(
             RoleRepository roleRepository,
             PermissionRepository permissionRepository,
             RolePermissionRepository rolePermissionRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            com.hmp.sales.security.PermissionAuthorizationManager permissionAuthorizationManager) {
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.userRepository = userRepository;
+        this.permissionAuthorizationManager = permissionAuthorizationManager;
     }
 
     @Override
@@ -73,6 +77,12 @@ public class DataInitializer implements ApplicationRunner {
         seedPermissions();
         seedRolePermissions();
         seedUsers();
+
+        // Nạp dữ liệu vừa seed vào bộ nhớ đệm RAM của PermissionAuthorizationManager
+        if (permissionAuthorizationManager != null) {
+            permissionAuthorizationManager.loadCache();
+        }
+
         log.info("[DataInitializer] Khởi tạo dữ liệu hoàn tất.");
     }
 
@@ -132,13 +142,16 @@ public class DataInitializer implements ApplicationRunner {
             new Object[]{"ORDER_CANCEL_ANY",          "ORDER",    "/api/v1/manager/orders/{id}/cancel",           "POST",   "Hủy bất kỳ đơn hàng nào"},
             new Object[]{"ORDER_STATUS_UPDATE",       "ORDER",    "/api/v1/manager/orders/{id}/status",           "PATCH",  "Cập nhật trạng thái đơn hàng"},
             // --- USER module ---
+            new Object[]{"USER_VIEW_ALL",             "USER",     "/api/v1/admin/users",                          "GET",    "Xem danh sách tài khoản người dùng"},
             new Object[]{"USER_LOCK",                 "USER",     "/api/v1/admin/users/{id}/lock",                "POST",   "Khóa tài khoản người dùng"},
             new Object[]{"USER_UNLOCK",               "USER",     "/api/v1/admin/users/{id}/unlock",              "POST",   "Mở khóa tài khoản người dùng"},
+            new Object[]{"USER_DELETE",               "USER",     "/api/v1/admin/users/{id}",                     "DELETE", "Xóa mềm tài khoản người dùng"},
             new Object[]{"MANAGER_CREATE",            "USER",     "/api/v1/admin/managers",                       "POST",   "Tạo tài khoản quản lý mới"},
             // --- SYSTEM module ---
             new Object[]{"SYSTEM_LOG_VIEW",           "SYSTEM",   "/api/v1/admin/logs",                           "GET",    "Xem nhật ký hệ thống"},
             new Object[]{"SYSTEM_SETTING_UPDATE",     "SYSTEM",   "/api/v1/admin/settings/{key}",                 "PUT",    "Cập nhật cấu hình hệ thống"},
             // --- ROLE module ---
+            new Object[]{"ROLE_PERMISSION_VIEW",      "ROLE",     "/api/v1/admin/roles/{id}/permissions",         "GET",    "Xem danh sách quyền hạn của vai trò"},
             new Object[]{"ROLE_PERMISSION_UPDATE",    "ROLE",     "/api/v1/admin/roles/{id}/permissions",         "PUT",    "Thay đổi danh sách quyền hạn của vai trò"}
     );
 
@@ -171,9 +184,9 @@ public class DataInitializer implements ApplicationRunner {
     /** Danh sách quyền mặc định của ADMIN. */
     private static final Set<String> ADMIN_PERMISSIONS = Set.of(
             "PRODUCT_VIEW", "PRODUCT_PRICE_VIEW",
-            "USER_LOCK", "USER_UNLOCK", "MANAGER_CREATE",
+            "USER_VIEW_ALL", "USER_LOCK", "USER_UNLOCK", "USER_DELETE", "MANAGER_CREATE",
             "SYSTEM_LOG_VIEW", "SYSTEM_SETTING_UPDATE",
-            "ROLE_PERMISSION_UPDATE"
+            "ROLE_PERMISSION_VIEW", "ROLE_PERMISSION_UPDATE"
     );
 
     /** Danh sách quyền mặc định của MANAGER. */

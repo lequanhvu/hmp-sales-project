@@ -3,20 +3,20 @@ package com.hmp.sales.security;
 import org.springframework.security.core.Authentication;
 
 /**
- * Service kiểm tra quyền hạn động của người dùng hiện tại.
+ * Service kiểm tra quyền hạn động của người dùng hiện tại phục vụ tầng nghiệp vụ (Service Layer).
  * <p>
- * Quyền được embedded vào JWT claims lúc đăng nhập và được Spring Security
- * load vào {@link Authentication} object. Service này đọc quyền từ
- * {@code Authentication} — không query DB mỗi request.
+ * Do token Access Token chỉ lưu danh sách vai trò (roles) để tránh token bloat,
+ * service này tra cứu quyền tương ứng của vai trò từ bộ nhớ đệm RAM (Singleton)
+ * thông qua {@link PermissionAuthorizationManager} — không query DB mỗi request.
  * <p>
  * Dùng trong {@code @PreAuthorize} hoặc service layer để kiểm tra quyền nghiệp vụ,
- * đặc biệt là {@code PRODUCT_PRICE_VIEW}.
+ * đặc biệt là {@code PRODUCT_PRICE_VIEW} phục vụ ẩn/hiện giá sản phẩm.
  */
 public interface PermissionEvaluationService {
 
     /**
      * Kiểm tra xem người dùng hiện tại có quyền hạn được chỉ định hay không.
-     * Quyền được đọc từ danh sách {@code GrantedAuthority} trong {@code Authentication}.
+     * Tra cứu quyền từ danh sách vai trò của người dùng trong cache RAM.
      *
      * @param authentication đối tượng xác thực hiện tại từ Spring Security context
      * @param permissionName tên quyền hạn cần kiểm tra (ví dụ: {@code "PRODUCT_PRICE_VIEW"})

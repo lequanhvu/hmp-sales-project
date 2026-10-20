@@ -525,13 +525,26 @@ Request product
 
 Do not implement this as a hard-coded `role == CUSTOMER` rule.
 
-## 18. Flow: Permission change → Forced token revocation
+## 18. Flow: Dynamic In-Memory Permission Authorization & Cache Invalidation
 
-Permissions are embedded into the JWT at login time and cached in the token. This is the chosen approach for performance (no DB query per request).
+To avoid token bloat (phình to token) and keep permissions instantly reactive to administrative changes, detailed permissions are **not** embedded into the JWT Access Token.
 
-Consequence: when Admin updates the permissions of a Role, existing tokens for users of that role become stale (still carry the old permissions).
+### Key architecture:
+1. **JWT Access Token**: Only carries user identity (`sub`) and role authorities (e.g. `["ROLE_ADMIN"]`, `["ROLE_CUSTOMER"]`).
+2. **Server-side RAM Cache (Singleton)**:
+   - On application startup, `PermissionAuthorizationManager` loads all active `RolePermission` mappings into RAM (`rolePermissionsCache`).
+   - Maps role codes (`ADMIN`, `ROLE_ADMIN`, `CUSTOMER`, `ROLE_CUSTOMER`) to their respective `List<Permission>` objects containing `(apiPath, method)`.
+3. **Endpoint Access Evaluation (`PermissionAuthorizationManager`)**:
+   - Implements Spring Security's `AuthorizationManager<RequestAuthorizationContext>`.
+   - On every incoming request:
+     - Extracts the user's roles from `Authentication`.
+     - Extracts the request URI and HTTP method.
+     - Uses `AntPathMatcher` to evaluate whether any of the user's role permissions match `(apiPath, method)`.
+     - Allows access if matched, else returns `AuthorizationDecision(false)` -> 403 Forbidden.
+4. **Data-level Permissions (e.g. `PRODUCT_PRICE_VIEW`)**:
+   - Evaluated by `PermissionEvaluationService` dynamically querying `PermissionAuthorizationManager.hasPermission(auth, "PRODUCT_PRICE_VIEW")` against the in-memory cache without database queries.
 
-### Forced revocation flow (triggered by Admin on `PUT /api/v1/admin/roles/{roleId}/permissions`)
+### Cache Invalidation Flow (triggered on `PUT /api/v1/admin/roles/{roleId}/permissions`)
 
 ```text
 Admin saves new permissions for Role R
@@ -542,41 +555,24 @@ Admin saves new permissions for Role R
    2. Log the change in SystemLog (PostgreSQL)
          |
          v
- Post-transaction cleanup (best-effort, non-blocking):
-   3. Find all active Users with Role R
+ Immediate Cache Invalidation:
+   3. Call PermissionAuthorizationManager.loadCache() to reload RAM cache immediately.
+      -> All subsequent requests for Role R instantly use updated permissions without waiting!
          |
          v
-   4. For each such User:
-        a. Find all active RefreshToken rows -> mark IsRevoked = true (PostgreSQL)
-        b. Find linked AccessTokenJti values -> DEL auth:access:{jti} from Redis
+ Post-transaction cleanup:
+   4. Find all active Users with Role R
          |
          v
-   5. Return 200 to Admin
+   5. Revoke tokens if forced session termination is required
+         |
+         v
+   6. Return 200 to Admin
 ```
 
-### Affected users behavior
+### Stale permission prevention
 
-```text
-User with Role R makes next request
-         |
-         v
-JWT signature valid, BUT
-         |
-         v
-Redis auth:access:{jti} -> MISSING (revoked in step 4b)
-         |
-         v
-RedisTokenValidationFilter -> 401 Unauthorized
-         |
-         v
-User must log in again -> new JWT with updated permissions
-```
-
-### Reliability note
-
-The token-revocation step (4) runs after the DB transaction commits. If the process crashes between step 2 and step 4, some tokens may remain briefly active until their natural TTL expiry (max 15 minutes). This is an acceptable tradeoff for V1.
-
-Do not embed permissions in the JWT in a way that prevents this revocation path.
+Because endpoint authorization and data-masking evaluate against the singleton in-memory `rolePermissionsCache`, updating permissions via `loadCache()` guarantees that changes take effect immediately on the very next incoming HTTP request, solving the token-bloat and stale-token problems completely.
 
 ## 19. Flow: notifications
 
