@@ -1,16 +1,16 @@
 package com.hmp.sales.config;
 
-import com.hmp.sales.user.entity.AuthProvider;
-import com.hmp.sales.user.entity.Permission;
-import com.hmp.sales.user.entity.Role;
-import com.hmp.sales.user.entity.RoleCode;
-import com.hmp.sales.user.entity.RolePermission;
-import com.hmp.sales.user.entity.User;
-import com.hmp.sales.user.entity.UserStatus;
-import com.hmp.sales.user.repository.PermissionRepository;
-import com.hmp.sales.user.repository.RolePermissionRepository;
-import com.hmp.sales.user.repository.RoleRepository;
-import com.hmp.sales.user.repository.UserRepository;
+import com.hmp.sales.feature.user.entity.AuthProvider;
+import com.hmp.sales.feature.user.entity.Permission;
+import com.hmp.sales.feature.user.entity.Role;
+import com.hmp.sales.feature.user.entity.RoleCode;
+import com.hmp.sales.feature.user.entity.RolePermission;
+import com.hmp.sales.feature.user.entity.User;
+import com.hmp.sales.feature.user.entity.UserStatus;
+import com.hmp.sales.feature.user.repository.PermissionRepository;
+import com.hmp.sales.feature.user.repository.RolePermissionRepository;
+import com.hmp.sales.feature.user.repository.RoleRepository;
+import com.hmp.sales.feature.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
