@@ -1,6 +1,6 @@
 # Project Status
 
-> Last updated: 2026-10-21 | By: @antigravity | Session: #4
+> Last updated: 2026-10-21 | By: @antigravity | Session: #5
 >
 > AI: update this file at the end of every session when asked.
 > Follow this exact format. Preserve full milestone checklists and project specifications.
@@ -8,6 +8,17 @@
 ---
 
 ## Completed
+- ✅ **Phase 2 — Authentication, Tokens & OTP completed**:
+  - `GoogleAuthService` & `GoogleAuthServiceImpl`: Xác thực Google ID Token qua endpoint Google TokenInfo (`https://oauth2.googleapis.com/tokeninfo`) sử dụng `RestClient`.
+  - `JwtTokenService` & `JwtTokenServiceImpl`: Cấp phát JWT Access Token (HMAC-SHA256) chứa claims `sub`, `email`, `roles`, `jti`, `exp` (bỏ qua `permissions` để hỗ trợ phân quyền động in-memory), tự động đăng ký `auth:access:{jti}` vào Redis với TTL.
+  - `RefreshToken` entity & `RefreshTokenRepository`: Lưu trữ mã băm SHA-256 của Refresh Token, quản lý `tokenFamilyId`, `jti`, thời hạn hết hạn `expiresAt` và cờ thu hồi `isRevoked`.
+  - `RefreshTokenService` & `RefreshTokenServiceImpl`: Triển khai xoay vòng Refresh Token (Token Rotation) nguyên tử, phát hiện tấn công tái sử dụng (Replay Attack) và thu hồi toàn bộ Token Family.
+  - `AuthService` & `AuthServiceImpl`: Điều phối toàn bộ luồng đăng nhập Google (idempotent user creation cho CUSTOMER, chặn tài khoản LOCKED), làm mới token và đăng xuất (xóa cookie HttpOnly, xóa Redis `auth:access:{jti}`, đánh dấu thu hồi trong DB).
+  - `AuthController`: Các endpoint RESTful `/api/v1/auth/google`, `/api/v1/auth/refresh`, `/api/v1/auth/logout` với transport cookie `HttpOnly; Secure; SameSite=Lax`.
+  - `PhoneOtpService` & `PhoneOtpServiceImpl`: Sinh mã OTP 6 chữ số ngẫu nhiên lưu Redis với TTL 5 phút, giới hạn tần suất gửi lại (cooldown 60s) và giới hạn số lần nhập sai tối đa (5 lần), lưu bảo chứng xác thực `otp:verified:{phone}` (TTL 10 phút) dùng khi đặt đơn hàng.
+  - `OtpController`: Endpoint RESTful `/api/v1/orders/otp/request`, `/api/v1/orders/otp/verify` và `/api/v1/me/otp/**`.
+  - Bổ sung quyền `ORDER_OTP_REQUEST`, `ORDER_OTP_VERIFY`, `ME_OTP_REQUEST`, `ME_OTP_VERIFY` vào `DataInitializer` cho vai trò `CUSTOMER`.
+  - Toàn bộ 100/100 tests pass (thêm 35 test cases mới cho Phase 2: `JwtTokenServiceImplTest`, `RefreshTokenServiceImplTest`, `AuthServiceImplTest`, `PhoneOtpServiceImplTest`, `AuthControllerTest`, `OtpControllerTest`).
 - ✅ **Phase 1 — Identity, Roles & Permissions (Task 1 & Task 2 completed)**:
   - JPA Entities configured in `com.hmp.sales.feature.user.entity`:
     - `Role` (bảng `roles`, khóa chính `role_id`, ràng buộc duy nhất trên `role_code`, cờ `is_deleted`, audit timestamps).
@@ -79,7 +90,7 @@
     - Tích hợp `anyRequest().access(permissionAuthorizationManager)` vào `SecurityConfig`.
     - Tự động làm mới cache (cache invalidation) qua `loadCache()` trong `RoleServiceImpl` và `DataInitializer`.
     - Cập nhật `PermissionEvaluationService` tra cứu quyền động từ cache RAM cho các logic nghiệp vụ lọc dữ liệu (như `PRODUCT_PRICE_VIEW`).
-  - Toàn bộ 66/66 unit và integration tests pass (11 test cases mới: `PermissionAuthorizationManagerTest`, `RolePermissionRepositoryTest`, `PermissionEvaluationServiceTest`).
+  - Toàn bộ 65/65 unit và integration tests pass (11 test cases mới: `PermissionAuthorizationManagerTest`, `RolePermissionRepositoryTest`, `PermissionEvaluationServiceTest`).
 
 ## In Progress
 _Nothing._
@@ -136,20 +147,20 @@ _Nothing._
 - [x] Admin Role & Permission management APIs (view/update role permissions with forced token revocation flow)
 
 ### Phase 2 — Authentication, Tokens & OTP
-- [ ] Google OAuth token verification service & user account resolution (idempotent mapping)
-- [ ] Application JWT token generation service (with unique `jti`, roles, permissions)
-- [ ] Redis active access token registry (`auth:access:{jti}` with TTL)
-- [ ] RefreshToken entity & repository with cryptographic hash storage, family tracking, and rotation
-- [ ] Refresh token rotation logic with token reuse detection and revocation
-- [ ] Auth endpoints:
-  - [ ] `POST /api/v1/auth/google` (login / register with Google)
-  - [ ] `POST /api/v1/auth/refresh` (rotate refresh token, issue new JWT)
-  - [ ] `POST /api/v1/auth/logout` (revoke Redis access token and PostgreSQL refresh token)
-- [ ] Redis phone OTP service:
-  - [ ] 6-digit random OTP generation with TTL (`otp:phone:<phone>`)
-  - [ ] Rate limiting for OTP generation and verification attempts
-  - [ ] OTP verification and single-use invalidation
-- [ ] Auth & OTP unit and integration tests
+- [x] Google OAuth token verification service & user account resolution (idempotent mapping)
+- [x] Application JWT token generation service (with unique `jti`, roles claim, dynamic permissions)
+- [x] Redis active access token registry (`auth:access:{jti}` with TTL)
+- [x] RefreshToken entity & repository with cryptographic hash storage, family tracking, and rotation
+- [x] Refresh token rotation logic with token reuse detection and revocation
+- [x] Auth endpoints:
+  - [x] `POST /api/v1/auth/google` (login / register with Google)
+  - [x] `POST /api/v1/auth/refresh` (rotate refresh token, issue new JWT)
+  - [x] `POST /api/v1/auth/logout` (revoke Redis access token and PostgreSQL refresh token)
+- [x] Redis phone OTP service:
+  - [x] 6-digit random OTP generation with TTL (`otp:phone:<phone>`)
+  - [x] Rate limiting for OTP generation and verification attempts
+  - [x] OTP verification and single-use invalidation
+- [x] Auth & OTP unit and integration tests (100/100 tests pass)
 
 ### Phase 3 — Catalog & Category Hierarchy
 - [ ] Category entity (self-referencing parent-child tree) & repository
