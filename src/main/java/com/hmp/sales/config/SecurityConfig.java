@@ -15,6 +15,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -131,16 +133,35 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_WHITELIST).permitAll()
                         // Tất cả các request còn lại được kiểm tra quyền động qua PermissionAuthorizationManager
                         .anyRequest().access(permissionAuthorizationManager))
-                // Cấu hình Spring Security đóng vai trò OAuth2 Resource Server nhận Bearer
-                // Token (JWT)
+                // Cấu hình Spring Security đóng vai trò OAuth2 Resource Server nhận Bearer Token (JWT)
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(Customizer.withDefaults())
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 // Thêm bộ lọc kiểm tra trạng thái token trong Redis ngay sau bộ lọc giải mã JWT
                 .addFilterAfter(redisTokenValidationFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * Chuyển đổi các vai trò từ claim {@code roles} trong JWT thành danh sách {@link org.springframework.security.core.GrantedAuthority}.
+     * Mặc định Spring Security tìm claim {@code scope}/{@code scp}, do đó cần cấu hình tùy biến
+     * để ánh xạ đúng claim {@code roles} (chứa {@code ROLE_ADMIN}, {@code ROLE_CUSTOMER}...).
+     *
+     * @return đối tượng {@link JwtAuthenticationConverter} đã cấu hình
+     */
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authoritiesConverter =
+                new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthoritiesClaimName("roles");
+        authoritiesConverter.setAuthorityPrefix("");
+
+        JwtAuthenticationConverter converter =
+                new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        return converter;
     }
 
     /**

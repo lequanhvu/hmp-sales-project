@@ -137,7 +137,6 @@ public class PermissionAuthorizationManager implements AuthorizationManager<Requ
         for (GrantedAuthority authority : authorities) {
             String roleName = authority.getAuthority();
             List<Permission> permissions = rolePermissionsCache.get(roleName);
-
             if (permissions != null && !permissions.isEmpty()) {
                 for (Permission permission : permissions) {
                     if (isPermissionMatched(permission, requestPath, httpMethod)) {
