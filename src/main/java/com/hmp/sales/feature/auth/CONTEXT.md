@@ -28,3 +28,6 @@ Provides identity verification and session management for Vietnamese retail sale
 
 ## Refactor Log
 (Add entries here when significant changes are made. Do NOT edit sections above.)
+
+### 2026-10-26 | @antigravity
+- Added pre-lookup for provisioned Manager accounts during Google login: if email exists, `providerSubject == null`, and role is `MANAGER`, link Google `sub` to the existing account before looking up by `(authProvider, providerSubject)` or attempting to create a Customer. This prevents duplicate key constraint violations on `email` when Managers log in with Google for the first time.

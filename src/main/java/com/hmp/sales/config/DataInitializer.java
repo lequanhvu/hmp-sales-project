@@ -310,12 +310,8 @@ public class DataInitializer implements ApplicationRunner {
                 null, AuthProvider.GOOGLE, "google_sub_004", UserStatus.ACTIVE, customerRole);
         seedUserIfAbsent("Bùi Ngọc Hân", "customer5@gmail.com", "0901234568",
                 null, AuthProvider.GOOGLE, "google_sub_005", UserStatus.ACTIVE, customerRole);
-
-        // 9-10. Customer Locked (Dùng test chức năng khóa / mở khóa / lọc status)
         seedUserIfAbsent("Ngô Gia Bảo", "customer6@gmail.com", "0901234569",
                 null, AuthProvider.GOOGLE, "google_sub_006", UserStatus.LOCKED, customerRole);
-        seedUserIfAbsent("Đỗ Thùy Dung", "customer7@gmail.com", "0901234570",
-                null, AuthProvider.GOOGLE, "google_sub_007", UserStatus.LOCKED, customerRole);
     }
 
     /**

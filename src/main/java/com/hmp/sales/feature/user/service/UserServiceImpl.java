@@ -26,6 +26,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Implementation của {@link UserService}.
@@ -193,17 +194,30 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleException("Admin không thể tự xóa tài khoản của chính mình.");
         }
 
-        user.setIsDeleted(true);
-        user.setStatus(UserStatus.LOCKED); // Đảm bảo bị vô hiệu hóa hoàn toàn
+        String originalEmail = user.getEmail();
+        String deleteId = UUID.randomUUID().toString();
+        String suffix = "_" + deleteId;
+
+        // Gắn hậu tố UUID vào sau email, số điện thoại và providerSubject trước khi xóa mềm
+        // để giải phóng các ràng buộc duy nhất (unique constraints), cho phép tái đăng ký tài khoản mới.
+        user.setEmail(user.getEmail() + suffix);
+        if (user.getPhone() != null && !user.getPhone().isBlank()) {
+            user.setPhone(user.getPhone() + suffix);
+        }
+        if (user.getProviderSubject() != null && !user.getProviderSubject().isBlank()) {
+            user.setProviderSubject(user.getProviderSubject() + suffix);
+        }
         userRepository.save(user);
 
-        // TODO Phase 2: revoke tất cả refresh token của user này
-        // (RefreshTokenRepository)
-        // TODO Phase 2: lấy access token jti từ refresh token và DEL khỏi Redis
-        log.info("[AdminUserService] Đã xóa mềm user id={}. Revoke token sẽ được thực hiện ở Phase 2.", userId);
+        // Đánh dấu xóa mềm và khóa tài khoản hoàn toàn
+        user.setIsDeleted(true);
+        user.setStatus(UserStatus.LOCKED);
+        userRepository.save(user);
+
+        log.info("[AdminUserService] Đã gắn suffix UUID [{}] và xóa mềm user id={}.", deleteId, userId);
 
         systemLogService.log(actorId, "USER_SOFT_DELETED", ENTITY_TYPE_USER, userId,
-                "Admin xóa mềm tài khoản: " + user.getEmail());
+                "Admin xóa mềm tài khoản: " + originalEmail + " (UUID: " + deleteId + ")");
     }
 
     // -------------------------------------------------------------------------

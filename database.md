@@ -60,10 +60,10 @@ Purpose: all application identities.
 | UserID | BIGINT IDENTITY | No | PK |
 | FullName | NVARCHAR(150) | No | Display name |
 | Email | NVARCHAR(255) | No | Unique for application account |
-| Phone | VARCHAR(20) | Yes | Customer contact; can be supplied later |
+| Phone | VARCHAR(100) | Yes | Customer contact; suffixed with UUID on soft delete |
 | PasswordHash | NVARCHAR(255) | Yes | Null for Google-authenticated Customer |
 | AuthProvider | VARCHAR(30) | No | `GOOGLE`, `LOCAL` |
-| ProviderSubject | NVARCHAR(255) | Yes | Stable Google subject/identity key |
+| ProviderSubject | NVARCHAR(255) | Yes | Stable Google subject/identity key; suffixed with UUID on soft delete |
 | Status | VARCHAR(20) | No | `ACTIVE`, `LOCKED` |
 | CreatedAt | DATETIME2 | No | Default current UTC/application time policy |
 | UpdatedAt | DATETIME2 | No | Updated timestamp |
@@ -73,6 +73,9 @@ Purpose: all application identities.
 Recommended uniqueness:
 - `Email` unique.
 - `(AuthProvider, ProviderSubject)` unique when ProviderSubject is not null.
+
+Soft delete rule:
+- Prior to setting `IsDeleted = true`, the system generates a random UUID and appends `_<UUID>` to `Email`, `Phone` (if present), and `ProviderSubject` (if present), then persists the record before marking `IsDeleted = true` and `Status = LOCKED`. This frees the unique constraints and allows a customer to register or authenticate again with the original email or phone number without database conflicts.
 
 Customer forgot-password/change-password endpoints are not part of this project for Google accounts.
 

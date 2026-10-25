@@ -33,8 +33,14 @@ Tất cả các repository và service được kiểm thử tự động với 
 - `PermissionRepositoryTest` (3 tests)
 - `RolePermissionRepositoryTest` (3 tests)
 - `UserRepositoryTest` (4 tests)
-- `AdminUserServiceTest` (10 tests)
+- `AdminUserServiceTest` (11 tests)
 - `AdminRoleServiceTest` (3 tests)
 - `PermissionAuthorizationManagerTest` (9 tests)
 - `PermissionEvaluationServiceTest` (7 tests)
-Toàn bộ 66/66 tests trong dự án đều PASS 100%.
+Toàn bộ 102/102 tests trong dự án đều PASS 100%.
+
+## 7. Soft Delete Policy & Unique Constraint Protection
+- Khi xóa mềm người dùng (`isDeleted = true`), hệ thống sinh một mã UUID ngẫu nhiên và gắn hậu tố `_<UUID>` vào các trường có ràng buộc duy nhất hoặc thông tin liên lạc nhạy cảm: `email`, `phone` (nếu có), và `providerSubject` (nếu có).
+- Lưu lại vào cơ sở dữ liệu trước khi chuyển cờ `isDeleted = true` và `status = LOCKED`.
+- Việc này giúp giải phóng các ràng buộc `uk_users_email` và `uk_users_auth_provider_subject`, đảm bảo khách hàng có thể đăng ký hoặc đăng nhập lại bằng email, số điện thoại hoặc tài khoản Google cũ mà không bị lỗi trùng khóa (duplicate key exception).
+

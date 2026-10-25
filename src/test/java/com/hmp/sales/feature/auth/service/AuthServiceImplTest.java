@@ -153,4 +153,47 @@ class AuthServiceImplTest {
         assertThatThrownBy(() -> authService.loginWithGoogle("bad-credential", httpResponse))
                 .isInstanceOf(UnauthorizedOperationException.class);
     }
+
+    @Test
+    @DisplayName("loginWithGoogle - Tài khoản Manager đã được provision (sub = null): liên kết Google sub và cấp token")
+    void loginWithGoogle_pendingManager_linksGoogleSubAndIssuesTokens() {
+        Role managerRole = new Role();
+        managerRole.setRoleCode(RoleCode.MANAGER);
+
+        User pendingManager = User.builder()
+                .fullName("Quản Lý Kho")
+                .email("manager@example.com")
+                .authProvider(AuthProvider.GOOGLE)
+                .providerSubject(null)
+                .role(managerRole)
+                .status(UserStatus.ACTIVE)
+                .build();
+        pendingManager.setId(77L);
+
+        GoogleUserPayload payload = new GoogleUserPayload("google-sub-manager-999", "manager@example.com", "Quản Lý Kho");
+        when(googleAuthService.verifyGoogleToken(anyString())).thenReturn(payload);
+        when(userRepository.findByEmailAndIsDeletedFalse("manager@example.com"))
+                .thenReturn(Optional.of(pendingManager));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        when(jwtTokenService.generateAccessToken(any())).thenReturn("manager-access-token");
+        when(jwtTokenService.extractJti(anyString())).thenReturn(UUID.randomUUID());
+
+        RefreshToken savedRt = RefreshToken.builder()
+                .user(pendingManager)
+                .tokenFamilyId(UUID.randomUUID())
+                .tokenHash("hash-manager")
+                .accessTokenJti(UUID.randomUUID())
+                .expiresAt(Instant.now().plusSeconds(86400))
+                .build();
+        when(refreshTokenService.createRefreshToken(any(), any()))
+                .thenReturn(new RefreshTokenPair("raw-rt-manager", savedRt));
+
+        AuthResponse response = authService.loginWithGoogle("google-credential", httpResponse);
+
+        assertThat(response.accessToken()).isEqualTo("manager-access-token");
+        assertThat(pendingManager.getProviderSubject()).isEqualTo("google-sub-manager-999");
+        verify(userRepository).save(pendingManager);
+        verify(roleRepository, never()).findByRoleCodeAndIsDeletedFalse(any());
+    }
 }

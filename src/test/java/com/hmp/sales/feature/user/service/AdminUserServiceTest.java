@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -177,7 +178,7 @@ class AdminUserServiceTest {
     class SoftDeleteUserTests {
 
         @Test
-        @DisplayName("Xóa mềm thành công: đánh dấu isDeleted = true và status = LOCKED")
+        @DisplayName("Xóa mềm thành công: gắn hậu tố UUID vào email, đánh dấu isDeleted = true và status = LOCKED")
         void softDeleteUser_Success() {
             when(userRepository.findById(10L)).thenReturn(Optional.of(activeUser));
 
@@ -185,8 +186,26 @@ class AdminUserServiceTest {
 
             assertThat(activeUser.getIsDeleted()).isTrue();
             assertThat(activeUser.getStatus()).isEqualTo(UserStatus.LOCKED);
-            verify(userRepository).save(activeUser);
+            assertThat(activeUser.getEmail()).startsWith("vana@example.com_");
+            verify(userRepository, times(2)).save(activeUser);
             verify(systemLogService).log(eq(999L), eq("USER_SOFT_DELETED"), eq("USER"), eq(10L), any());
+        }
+
+        @Test
+        @DisplayName("Xóa mềm thành công người dùng có cả phone và providerSubject: gắn hậu tố UUID vào tất cả các trường")
+        void softDeleteUser_WithPhoneAndProviderSubject_AppendsSuffixToAll() {
+            activeUser.setPhone("0987654321");
+            activeUser.setProviderSubject("google-sub-12345");
+            when(userRepository.findById(10L)).thenReturn(Optional.of(activeUser));
+
+            adminUserService.softDeleteUser(10L, 999L);
+
+            assertThat(activeUser.getIsDeleted()).isTrue();
+            assertThat(activeUser.getStatus()).isEqualTo(UserStatus.LOCKED);
+            assertThat(activeUser.getEmail()).startsWith("vana@example.com_");
+            assertThat(activeUser.getPhone()).startsWith("0987654321_");
+            assertThat(activeUser.getProviderSubject()).startsWith("google-sub-12345_");
+            verify(userRepository, times(2)).save(activeUser);
         }
 
         @Test

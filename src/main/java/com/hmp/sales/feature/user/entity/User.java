@@ -66,8 +66,9 @@ public class User {
 
     /**
      * Số điện thoại liên hệ (có thể bổ sung khi khách hàng đặt hàng lần đầu).
+     * Chiều dài 100 ký tự để chứa được hậu tố UUID khi tài khoản bị xóa mềm.
      */
-    @Column(name = "phone", length = 20)
+    @Column(name = "phone", length = 100)
     private String phone;
 
     /**

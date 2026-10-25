@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -84,9 +85,22 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse loginWithGoogle(String credential, HttpServletResponse httpResponse) {
         GoogleUserPayload payload = googleAuthService.verifyGoogleToken(credential);
 
-        User user = userRepository
-                .findByAuthProviderAndProviderSubjectAndIsDeletedFalse(AuthProvider.GOOGLE, payload.sub())
-                .orElseGet(() -> createNewCustomer(payload));
+        // Kiểm tra tài khoản Manager được Admin tạo trước (sub = null) để liên kết Google sub
+        Optional<User> pendingManager = userRepository.findByEmailAndIsDeletedFalse(payload.email())
+                .filter(u -> u.getProviderSubject() == null
+                        && u.getRole() != null
+                        && RoleCode.MANAGER.equals(u.getRole().getRoleCode()));
+        User user;
+        if (pendingManager.isPresent()) {
+            user = pendingManager.get();
+            user.setProviderSubject(payload.sub());
+            user = userRepository.save(user);
+            log.info("[GoogleAuth] Liên kết Google sub [{}] thành công cho tài khoản Manager: email={}", payload.sub(), payload.email());
+        } else {
+            user = userRepository
+                    .findByAuthProviderAndProviderSubjectAndIsDeletedFalse(AuthProvider.GOOGLE, payload.sub())
+                    .orElseGet(() -> createNewCustomer(payload));
+        }
 
         if (UserStatus.LOCKED.equals(user.getStatus())) {
             throw new UnauthorizedOperationException("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
