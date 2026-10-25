@@ -86,7 +86,7 @@ class OtpControllerTest {
                     "otp": "123456"
                 }
                 """;
-        doNothing().when(phoneOtpService).verifyOtp("0912345678", "123456");
+        doNothing().when(phoneOtpService).verifyOtp("0912345678", "123456", null);
 
         mockMvc.perform(post("/api/v1/orders/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,7 +96,7 @@ class OtpControllerTest {
                 .andExpect(jsonPath("$.data.phone").value("0912345678"))
                 .andExpect(jsonPath("$.data.verified").value(true));
 
-        verify(phoneOtpService).verifyOtp("0912345678", "123456");
+        verify(phoneOtpService).verifyOtp("0912345678", "123456", null);
     }
 
     @Test
@@ -109,7 +109,7 @@ class OtpControllerTest {
                 }
                 """;
         doThrow(new OtpVerificationException("Mã OTP không chính xác. Bạn còn 2 lần thử."))
-                .when(phoneOtpService).verifyOtp("0912345678", "999999");
+                .when(phoneOtpService).verifyOtp("0912345678", "999999", null);
 
         mockMvc.perform(post("/api/v1/orders/otp/verify")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,7 +118,7 @@ class OtpControllerTest {
                 .andExpect(jsonPath("$.statusCode").value(400))
                 .andExpect(jsonPath("$.message").value("Mã OTP không chính xác. Bạn còn 2 lần thử."));
 
-        verify(phoneOtpService).verifyOtp("0912345678", "999999");
+        verify(phoneOtpService).verifyOtp("0912345678", "999999", null);
     }
 
     @Test

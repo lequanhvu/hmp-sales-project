@@ -31,7 +31,7 @@ Do not invent business behavior when the requirements are silent. Mark unresolve
 - Initial customers are individual customers in one province/city.
 - Guests can browse; login is required to place orders.
 - Customer authentication is via Google.
-- OTP is required when a customer enters a phone number during ordering.Information related to ordering will be saved when the user enters it for the first time. Customers can update it later.
+- OTP is required when a customer enters a phone number. Upon successful OTP verification, the phone number is directly saved to the user's account in PostgreSQL, and an active verification proof is maintained in Redis.
 - Admin, Manager, Customer are the business roles.
 - Admin controls permissions, including whether Customer can see product prices.
 - Product price visibility must be permission-driven, not hard-coded to a role.

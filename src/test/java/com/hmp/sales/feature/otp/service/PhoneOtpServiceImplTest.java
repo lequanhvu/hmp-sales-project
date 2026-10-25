@@ -15,6 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import com.hmp.sales.feature.user.entity.User;
+import com.hmp.sales.feature.user.repository.UserRepository;
+
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.*;
@@ -31,6 +35,7 @@ class PhoneOtpServiceImplTest {
 
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ValueOperations<String, String> valueOps;
+    @Mock private UserRepository userRepository;
 
     private PhoneOtpServiceImpl otpService;
     private static final String PHONE = "0987654321";
@@ -40,7 +45,7 @@ class PhoneOtpServiceImplTest {
         AppProperties.OtpProperties otpProps = new AppProperties.OtpProperties(300, 5, 60);
         AppProperties appProperties = new AppProperties(null, otpProps, null, null);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        otpService = new PhoneOtpServiceImpl(redisTemplate, appProperties);
+        otpService = new PhoneOtpServiceImpl(redisTemplate, appProperties, userRepository);
     }
 
     @Test
@@ -77,6 +82,22 @@ class PhoneOtpServiceImplTest {
 
         verify(redisTemplate).delete("otp:phone:" + PHONE);
         verify(redisTemplate).delete("otp:attempts:" + PHONE);
+        verify(valueOps).set(eq("otp:verified:" + PHONE), eq("1"), eq(600L), eq(TimeUnit.SECONDS));
+    }
+
+    @Test
+    @DisplayName("verifyOtp - Mã đúng kèm userId: lưu số điện thoại vào DB cho User")
+    void verifyOtp_correctOtp_withUserId_savesPhoneToUserDb() {
+        when(valueOps.get("otp:attempts:" + PHONE)).thenReturn(null);
+        when(valueOps.get("otp:phone:" + PHONE)).thenReturn("482915");
+        User mockUser = User.builder().id(10L).fullName("Test Customer").build();
+        when(userRepository.findById(10L)).thenReturn(Optional.of(mockUser));
+
+        otpService.verifyOtp(PHONE, "482915", 10L);
+
+        assertThat(mockUser.getPhone()).isEqualTo(PHONE);
+        verify(userRepository).save(mockUser);
+        verify(redisTemplate).delete("otp:phone:" + PHONE);
         verify(valueOps).set(eq("otp:verified:" + PHONE), eq("1"), eq(600L), eq(TimeUnit.SECONDS));
     }
 

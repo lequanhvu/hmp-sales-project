@@ -8,6 +8,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import com.hmp.sales.feature.user.repository.UserRepository;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.security.SecureRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -21,8 +24,7 @@ import java.util.concurrent.TimeUnit;
  *   <li>{@code otp:attempts:{phone}} — bộ đếm sai (TTL = otpExpiry)</li>
  *   <li>{@code otp:verified:{phone}} — bảo chứng xác thực (TTL = 600s)</li>
  * </ul>
- * Trong V1: OTP được log ở DEBUG level (chưa có SMS/ZNS thật).
- * TUYỆT ĐỐI không log giá trị OTP ở INFO hay WARN level.
+ * Khi xác thực thành công, lưu số điện thoại vào bảng users trong PostgreSQL nếu có userId.
  */
 @Service
 public class PhoneOtpServiceImpl implements PhoneOtpService {
@@ -39,17 +41,20 @@ public class PhoneOtpServiceImpl implements PhoneOtpService {
 
     private final StringRedisTemplate redisTemplate;
     private final AppProperties appProperties;
+    private final UserRepository userRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
     /**
-     * Khởi tạo service với Redis template và cấu hình OTP.
+     * Khởi tạo service với Redis template, cấu hình OTP và UserRepository.
      *
-     * @param redisTemplate Redis template dùng để thao tác key-value
-     * @param appProperties cấu hình OTP (expirySeconds, maxAttempts, resendIntervalSeconds)
+     * @param redisTemplate  Redis template dùng để thao tác key-value
+     * @param appProperties  cấu hình OTP (expirySeconds, maxAttempts, resendIntervalSeconds)
+     * @param userRepository repository truy xuất và lưu thông tin người dùng
      */
-    public PhoneOtpServiceImpl(StringRedisTemplate redisTemplate, AppProperties appProperties) {
+    public PhoneOtpServiceImpl(StringRedisTemplate redisTemplate, AppProperties appProperties, UserRepository userRepository) {
         this.redisTemplate = redisTemplate;
         this.appProperties = appProperties;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -87,7 +92,8 @@ public class PhoneOtpServiceImpl implements PhoneOtpService {
      * {@inheritDoc}
      */
     @Override
-    public void verifyOtp(String phone, String otp) {
+    @Transactional
+    public void verifyOtp(String phone, String otp, Long userId) {
         String attemptsKey = ATTEMPTS_KEY_PREFIX + phone;
         String otpKey = OTP_KEY_PREFIX + phone;
 
@@ -122,7 +128,25 @@ public class PhoneOtpServiceImpl implements PhoneOtpService {
         redisTemplate.delete(attemptsKey);
         redisTemplate.opsForValue().set(VERIFIED_KEY_PREFIX + phone, "1", VERIFIED_TTL_SECONDS, TimeUnit.SECONDS);
 
+        // Lưu số điện thoại vào cơ sở dữ liệu nếu có userId
+        if (userId != null && userRepository != null) {
+            userRepository.findById(userId).ifPresent(user -> {
+                user.setPhone(phone);
+                userRepository.save(user);
+                log.info("[OTP] Đã cập nhật số điện thoại '{}' vào DB cho người dùng ID={}", phone, userId);
+            });
+        }
+
         log.debug("Xác thực OTP thành công cho phone={}", phone);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public void verifyOtp(String phone, String otp) {
+        verifyOtp(phone, otp, null);
     }
 
     /**

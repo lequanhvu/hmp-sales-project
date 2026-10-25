@@ -31,18 +31,32 @@ public interface PhoneOtpService {
     void sendOtp(String phone);
 
     /**
-     * Xác minh mã OTP do người dùng nhập.
+     * Xác minh mã OTP do người dùng nhập và cập nhật số điện thoại vào tài khoản trong DB nếu có userId.
      * <p>
      * Kiểm tra số lần nhập sai: nếu vượt giới hạn, OTP bị hủy và ném {@link com.hmp.sales.common.exception.OtpVerificationException}.
-     * Nếu OTP đúng: xóa khỏi Redis ngay (single-use), đặt cờ {@code otp:verified:{phone}} với TTL 10 phút.
+     * Nếu OTP đúng: xóa khỏi Redis ngay (single-use), đặt cờ {@code otp:verified:{phone}} với TTL 10 phút,
+     * đồng thời lưu số điện thoại vào bảng {@code users} trong cơ sở dữ liệu.
      * Nếu OTP sai: tăng bộ đếm lần nhập sai.
+     *
+     * @param phone  số điện thoại cần xác minh
+     * @param otp    mã OTP 6 chữ số người dùng nhập vào
+     * @param userId ID người dùng đang xác thực (nếu có, để lưu số điện thoại vào DB)
+     * @throws com.hmp.sales.common.exception.OtpVerificationException nếu OTP sai, đã hết hạn,
+     *         hoặc vượt số lần thử cho phép
+     */
+    void verifyOtp(String phone, String otp, Long userId);
+
+    /**
+     * Xác minh mã OTP do người dùng nhập (không lưu userId).
      *
      * @param phone số điện thoại cần xác minh
      * @param otp   mã OTP 6 chữ số người dùng nhập vào
      * @throws com.hmp.sales.common.exception.OtpVerificationException nếu OTP sai, đã hết hạn,
      *         hoặc vượt số lần thử cho phép
      */
-    void verifyOtp(String phone, String otp);
+    default void verifyOtp(String phone, String otp) {
+        verifyOtp(phone, otp, null);
+    }
 
     /**
      * Kiểm tra xem số điện thoại đã có bảo chứng xác thực OTP còn hiệu lực hay không.
