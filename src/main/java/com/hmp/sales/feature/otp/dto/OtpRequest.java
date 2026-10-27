@@ -2,7 +2,6 @@ package com.hmp.sales.feature.otp.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 /**
  * DTO yêu cầu gửi mã OTP đến số điện thoại.
