@@ -308,9 +308,42 @@ These endpoints are not part of the Customer authentication flow.
 
 ---
 
-# 4. Public category APIs
+# 4. Public category & master data APIs
 
-## 4.1 Get products in category
+## 4.1 Get category tree
+
+```http
+GET /api/v1/categories/tree
+```
+
+Returns the hierarchical category tree. Only active, non-deleted categories are included.
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": [
+    {
+      "categoryId": 1,
+      "name": "Tôn lợp mái",
+      "status": "ACTIVE",
+      "children": [
+        {
+          "categoryId": 10,
+          "name": "Tôn sóng vuông",
+          "status": "ACTIVE",
+          "children": []
+        }
+      ]
+    }
+  ],
+  "message": "Thành công",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 4.2 Get products in category
 
 ```http
 GET /api/v1/categories/{categoryId}/products
@@ -352,6 +385,96 @@ Only products with `ACTIVE` status are returned to public clients.
   "statusCode": 404,
   "data": null,
   "message": "Danh mục không tồn tại",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 4.3 List active brands
+
+```http
+GET /api/v1/brands
+```
+
+Returns list of active brands for customer browsing and dropdown filters.
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": [
+    {
+      "brandId": 1,
+      "brandName": "Hoa Sen",
+      "status": "ACTIVE"
+    },
+    {
+      "brandId": 2,
+      "brandName": "Đông Á",
+      "status": "ACTIVE"
+    }
+  ],
+  "message": "Thành công",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 4.4 List active units
+
+```http
+GET /api/v1/units
+```
+
+Returns list of active units (`m`, `tấm`, `cái`, etc.) for customer and manager reference.
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": [
+    {
+      "unitId": 1,
+      "unitName": "m",
+      "status": "ACTIVE"
+    },
+    {
+      "unitId": 2,
+      "unitName": "tấm",
+      "status": "ACTIVE"
+    }
+  ],
+  "message": "Thành công",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 4.5 List active colors
+
+```http
+GET /api/v1/colors
+```
+
+Returns list of active manufacturing colors.
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": [
+    {
+      "colorId": 1,
+      "colorName": "Xanh ngọc",
+      "status": "ACTIVE"
+    },
+    {
+      "colorId": 2,
+      "colorName": "Đỏ đậm",
+      "status": "ACTIVE"
+    }
+  ],
+  "message": "Thành công",
   "timestamp": "2026-10-01T10:00:00"
 }
 ```
@@ -1489,17 +1612,19 @@ POST /api/v1/manager/categories/{categoryId}/unlock
 
 ```http
 DELETE /api/v1/manager/categories/{categoryId}
+DELETE /api/v1/manager/categories/{categoryId}?force=true
 ```
 
-Deletion is permanent. There is no `restore` endpoint.
+Performs a soft delete (`isDeleted = true`).
 
-If the category still contains child categories or products, the server may reject the operation with `409` until the dependency rule is satisfied.
-
-### Request example
-
-```json
-{}
-```
+Business rules:
+1. **If the category is empty** (contains no child categories and no products): Soft-deleted immediately.
+2. **If the category contains child categories or products**:
+   - Calling `DELETE /api/v1/manager/categories/{categoryId}` (without `force=true`):
+     The server rejects deletion with `409 Conflict`, returning the counts of impacted child categories and products so the frontend client can display a confirmation popup.
+   - When the user confirms in the popup and the client calls `DELETE /api/v1/manager/categories/{categoryId}?force=true`:
+     - The server validates whether any product in the sub-tree belongs to an **incomplete order** (status other than `COMPLETED` or `CANCELLED`). If so, deletion is rejected with `409 Conflict`.
+     - Otherwise, the server performs a cascade soft delete: marks `isDeleted = true` for the current category and all child categories and products under its tree.
 
 ### Success response — 200
 
@@ -1507,18 +1632,38 @@ If the category still contains child categories or products, the server may reje
 {
   "statusCode": 200,
   "data": null,
-  "message": "Thành công",
+  "message": "Xóa danh mục thành công.",
   "timestamp": "2026-10-01T10:00:00"
 }
 ```
 
-### Failure response — 409
+### Failure response when confirmation is required (without `force=true`) — 409
 
 ```json
 {
   "statusCode": 409,
-  "data": null,
-  "message": "Category cannot be deleted because it contains child categories or products.",
+  "data": {
+    "childCategoryCount": 5,
+    "productCount": 15,
+    "totalImpactCount": 20,
+    "requiresConfirmation": true
+  },
+  "message": "Trong danh mục này chứa 20 danh mục con và sản phẩm khác. Bạn có chắc chắn muốn xóa danh mục này không?",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+### Failure response when sub-tree contains a product in an incomplete order — 409
+
+```json
+{
+  "statusCode": 409,
+  "data": {
+    "productId": 100,
+    "orderId": 10025,
+    "orderStatus": "PROCESSING"
+  },
+  "message": "Không thể xóa vì sản phẩm 'Tôn sóng A' đang nằm trong đơn hàng #10025 chưa hoàn thành.",
   "timestamp": "2026-10-01T10:00:00"
 }
 ```
@@ -1736,13 +1881,12 @@ POST /api/v1/manager/products/{productId}/unlock
 DELETE /api/v1/manager/products/{productId}
 ```
 
-Deletion is permanent and cannot be restored. A new product must be created if the same item is needed again.
+Performs a soft delete (`isDeleted = true`).
 
-### Request example
-
-```json
-{}
-```
+Business rules:
+- Soft delete is supported even if the product was referenced in completed (`COMPLETED`) or cancelled (`CANCELLED`) historical orders, as historical orders retain immutable snapshots.
+- Soft deleting a product automatically marks its associated variants (`ProductVariant`) and images (`ProductImage`) as `isDeleted = true`.
+- **Deletion is REJECTED (409 Conflict)** ONLY WHEN this product belongs to an active, incomplete order (status: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPING`).
 
 ### Success response — 200
 
@@ -1750,23 +1894,25 @@ Deletion is permanent and cannot be restored. A new product must be created if t
 {
   "statusCode": 200,
   "data": null,
-  "message": "Thành công",
+  "message": "Xóa sản phẩm thành công.",
   "timestamp": "2026-10-01T10:00:00"
 }
 ```
 
-### Failure response — 409
+### Failure response when product is in an incomplete order — 409
 
 ```json
 {
   "statusCode": 409,
-  "data": null,
-  "message": "Product cannot be deleted because it is referenced by historical orders.",
+  "data": {
+    "productId": 100,
+    "orderId": 10025,
+    "orderStatus": "PROCESSING"
+  },
+  "message": "Không thể xóa sản phẩm vì đang nằm trong đơn hàng #10025 chưa hoàn thành.",
   "timestamp": "2026-10-01T10:00:00"
 }
 ```
-
-Historical order data must remain readable even after a product is locked. Destructive deletion must not silently destroy historical order meaning.
 
 ## 10.6 Add product image
 
@@ -2627,6 +2773,411 @@ All changes must be audited.
 
 ---
 
+# 15.3 Admin brand management APIs
+
+## 15.3.1 List brands
+
+```http
+GET /api/v1/admin/brands
+```
+
+Query parameters:
+- `name`: search by brand name
+- `status`: `ACTIVE` | `LOCKED`
+- `page`: default 0
+- `size`: default 10
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "result": [
+      {
+        "brandId": 1,
+        "brandName": "Hoa Sen",
+        "status": "ACTIVE",
+        "createdAt": "2026-10-01T10:00:00",
+        "updatedAt": "2026-10-01T10:00:00"
+      }
+    ],
+    "meta": {
+      "page": 0,
+      "size": 10,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+  },
+  "message": "Thành công",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.3.2 Create brand
+
+```http
+POST /api/v1/admin/brands
+```
+
+### Request example
+
+```json
+{
+  "brandName": "Đông Á"
+}
+```
+
+### Success response — 201
+
+```json
+{
+  "statusCode": 201,
+  "data": {
+    "brandId": 2,
+    "brandName": "Đông Á",
+    "status": "ACTIVE"
+  },
+  "message": "Tạo thương hiệu thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+### Failure response — 409
+
+```json
+{
+  "statusCode": 409,
+  "data": null,
+  "message": "Tên thương hiệu đã tồn tại.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.3.3 Update brand
+
+```http
+PATCH /api/v1/admin/brands/{brandId}
+```
+
+### Request example
+
+```json
+{
+  "brandName": "Tôn Đông Á (cập nhật)"
+}
+```
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "brandId": 2,
+    "brandName": "Tôn Đông Á (cập nhật)",
+    "status": "ACTIVE"
+  },
+  "message": "Cập nhật thương hiệu thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.3.4 Lock / Unlock brand
+
+```http
+POST /api/v1/admin/brands/{brandId}/lock
+POST /api/v1/admin/brands/{brandId}/unlock
+```
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "brandId": 2,
+    "status": "LOCKED"
+  },
+  "message": "Khóa thương hiệu thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.3.5 Delete brand
+
+```http
+DELETE /api/v1/admin/brands/{brandId}
+```
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": null,
+  "message": "Xóa thương hiệu thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+### Failure response — 409
+
+```json
+{
+  "statusCode": 409,
+  "data": null,
+  "message": "Không thể xóa thương hiệu vì đang được sử dụng bởi các sản phẩm hiện có.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+---
+
+# 15.4 Admin unit management APIs
+
+## 15.4.1 List units
+
+```http
+GET /api/v1/admin/units
+```
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "result": [
+      {
+        "unitId": 1,
+        "unitName": "m",
+        "status": "ACTIVE",
+        "createdAt": "2026-10-01T10:00:00",
+        "updatedAt": "2026-10-01T10:00:00"
+      }
+    ],
+    "meta": {
+      "page": 0,
+      "size": 10,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+  },
+  "message": "Thành công",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.4.2 Create unit
+
+```http
+POST /api/v1/admin/units
+```
+
+### Request example
+
+```json
+{
+  "unitName": "cuộn"
+}
+```
+
+### Success response — 201
+
+```json
+{
+  "statusCode": 201,
+  "data": {
+    "unitId": 3,
+    "unitName": "cuộn",
+    "status": "ACTIVE"
+  },
+  "message": "Tạo đơn vị tính thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+### Failure response — 409
+
+```json
+{
+  "statusCode": 409,
+  "data": null,
+  "message": "Đơn vị tính đã tồn tại.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.4.3 Update unit
+
+```http
+PATCH /api/v1/admin/units/{unitId}
+```
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "unitId": 3,
+    "unitName": "cuộn lớn",
+    "status": "ACTIVE"
+  },
+  "message": "Cập nhật đơn vị tính thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.4.4 Lock / Unlock unit
+
+```http
+POST /api/v1/admin/units/{unitId}/lock
+POST /api/v1/admin/units/{unitId}/unlock
+```
+
+## 15.4.5 Delete unit
+
+```http
+DELETE /api/v1/admin/units/{unitId}
+```
+
+### Failure response — 409
+
+```json
+{
+  "statusCode": 409,
+  "data": null,
+  "message": "Không thể xóa đơn vị tính vì đang được sử dụng trong bảng giá sản phẩm.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+---
+
+# 15.5 Admin color management APIs
+
+## 15.5.1 List colors
+
+```http
+GET /api/v1/admin/colors
+```
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "result": [
+      {
+        "colorId": 1,
+        "colorName": "Xanh ngọc",
+        "status": "ACTIVE",
+        "createdAt": "2026-10-01T10:00:00",
+        "updatedAt": "2026-10-01T10:00:00"
+      }
+    ],
+    "meta": {
+      "page": 0,
+      "size": 10,
+      "totalElements": 1,
+      "totalPages": 1
+    }
+  },
+  "message": "Thành công",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.5.2 Create color
+
+```http
+POST /api/v1/admin/colors
+```
+
+### Request example
+
+```json
+{
+  "colorName": "Xanh rêu"
+}
+```
+
+### Success response — 201
+
+```json
+{
+  "statusCode": 201,
+  "data": {
+    "colorId": 3,
+    "colorName": "Xanh rêu",
+    "status": "ACTIVE"
+  },
+  "message": "Tạo màu sắc thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+### Failure response — 409
+
+```json
+{
+  "statusCode": 409,
+  "data": null,
+  "message": "Màu sắc này đã tồn tại.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.5.3 Update color
+
+```http
+PATCH /api/v1/admin/colors/{colorId}
+```
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "colorId": 3,
+    "colorName": "Xanh rêu nhạt",
+    "status": "ACTIVE"
+  },
+  "message": "Cập nhật màu sắc thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 15.5.4 Lock / Unlock color
+
+```http
+POST /api/v1/admin/colors/{colorId}/lock
+POST /api/v1/admin/colors/{colorId}/unlock
+```
+
+## 15.5.5 Delete color
+
+```http
+DELETE /api/v1/admin/colors/{colorId}
+```
+
+### Failure response — 409
+
+```json
+{
+  "statusCode": 409,
+  "data": null,
+  "message": "Không thể xóa màu sắc vì đang được liên kết với các biến thể sản phẩm.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+---
+
 # 16. Admin system-log APIs
 
 ## 16.1 Search system logs
@@ -2897,6 +3448,9 @@ POST /api/v1/notifications/read-all
 | Manage permissions | No | No | No | Yes |
 | View system logs | No | No | No | Yes |
 | Configure system settings | No | No | No | Yes |
+| Manage brands (CRUD/Lock) | No | No | View only | Yes |
+| Manage units (CRUD/Lock) | No | No | View only | Yes |
+| Manage colors (CRUD/Lock) | No | No | View only | Yes |
 
 `TBD` means the requirements do not yet define the full Admin scope for product/category/order operations.
 
@@ -3001,6 +3555,9 @@ The following business resources currently use this pattern where applicable:
 Category
 Product
 ProductVariant
+Brand
+Unit
+Color
 User account
 ```
 

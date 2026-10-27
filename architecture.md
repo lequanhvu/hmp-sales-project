@@ -96,7 +96,7 @@ Spring Security OAuth2 Resource Server supports JWT bearer-token validation; the
 - Manage users and Manager accounts.
 - Lock/unlock accounts.
 - View system logs.
-- Configure units and other system settings.
+- Configure units, brands, colors, and other system settings (dynamic catalog master data).
 - Manage role permissions.
 - Control whether Customer has `PRODUCT_PRICE_VIEW` permission.
 
@@ -221,6 +221,30 @@ POST /manager/categories/{categoryId}/products
 ```
 
 Category and Product remain separate tables. The tree is a UI/business representation assembled from `Category.parentCategoryId` and Product.categoryId.
+
+### Backend flow: delete category
+```text
+DELETE /manager/categories/{categoryId}?force=false|true
+ -> Security: MANAGER category-delete permission
+ -> CategoryService
+ -> Check if empty -> soft delete Category (isDeleted = true)
+ -> If contains children/products:
+    -> If force=false -> return 409 Conflict with counts (childCategoryCount, productCount) for frontend confirm popup
+    -> If force=true:
+       -> Check if any product in sub-tree is in an active/incomplete order (PENDING, CONFIRMED, PROCESSING, SHIPPING)
+          -> If yes -> reject with 409 Conflict
+          -> If no  -> cascade soft delete Category + sub-categories + sub-products
+```
+
+### Backend flow: delete product
+```text
+DELETE /manager/products/{productId}
+ -> Security: MANAGER product-delete permission
+ -> ProductService
+ -> Check if product is in an active/incomplete order (PENDING, CONFIRMED, PROCESSING, SHIPPING)
+    -> If yes -> reject with 409 Conflict
+    -> If no  -> soft delete Product + associated variants + images (isDeleted = true)
+```
 
 ## 8. Flow: Google authentication + application JWT
 

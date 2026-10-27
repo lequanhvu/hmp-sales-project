@@ -93,6 +93,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Xử lý ngoại lệ xung đột nghiệp vụ cần xác nhận từ người dùng (409 Conflict kèm dữ liệu chi tiết).
+     * Ví dụ: xóa danh mục còn chứa danh mục con hoặc sản phẩm — trả về số lượng bị ảnh hưởng
+     * để frontend hiển thị popup cảnh báo.
+     *
+     * @param ex ngoại lệ xung đột kèm payload chi tiết
+     * @return phản hồi lỗi 409 Conflict với payload thông tin chi tiết
+     */
+    @ExceptionHandler(ConflictWithPayloadException.class)
+    public ResponseEntity<ApiErrorResponse<Object>> handleConflictWithPayload(ConflictWithPayloadException ex) {
+        log.warn("Conflict with payload: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(ApiErrorResponse.of(HttpStatus.CONFLICT.value(), ex.getMessage(), ex.getPayload()));
+    }
+
+
+    /**
      * Xử lý lỗi validation dữ liệu khi kiểm tra @Valid trên Request Body DTO (400 Bad Request).
      * Thu thập danh sách chi tiết các trường vi phạm (field name và message).
      *

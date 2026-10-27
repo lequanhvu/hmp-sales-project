@@ -25,6 +25,14 @@ public interface PermissionEvaluationService {
     boolean hasPermission(Authentication authentication, String permissionName);
 
     /**
+     * Kiểm tra quyền hạn của người dùng đang đăng nhập trong SecurityContextHolder hiện tại.
+     *
+     * @param permissionName tên quyền hạn cần kiểm tra
+     * @return {@code true} nếu người dùng có quyền, {@code false} nếu không có hoặc chưa xác thực
+     */
+    boolean hasPermission(String permissionName);
+
+    /**
      * Kiểm tra xem người dùng hiện tại có quyền xem giá sản phẩm hay không.
      * <p>
      * Đây là kiểm tra quan trọng nhất theo nghiệp vụ: giá sản phẩm chỉ
@@ -35,4 +43,11 @@ public interface PermissionEvaluationService {
      * @return {@code true} nếu có quyền xem giá, {@code false} nếu không
      */
     boolean canViewProductPrice(Authentication authentication);
+
+    /**
+     * Kiểm tra xem người dùng trong SecurityContext hiện tại có quyền xem giá sản phẩm hay không.
+     *
+     * @return {@code true} nếu có quyền xem giá, {@code false} nếu không
+     */
+    boolean canViewProductPrice();
 }

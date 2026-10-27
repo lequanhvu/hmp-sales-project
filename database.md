@@ -114,6 +114,18 @@ SYSTEM_LOG_VIEW
 SYSTEM_SETTING_UPDATE
 ROLE_PERMISSION_VIEW
 ROLE_PERMISSION_UPDATE
+BRAND_VIEW_ALL
+BRAND_CREATE
+BRAND_UPDATE
+BRAND_DELETE
+UNIT_VIEW_ALL
+UNIT_CREATE
+UNIT_UPDATE
+UNIT_DELETE
+COLOR_VIEW_ALL
+COLOR_CREATE
+COLOR_UPDATE
+COLOR_DELETE
 ```
 
 The exact permission catalog can grow, but each permission should represent an actual server-side authorization decision.
@@ -161,20 +173,28 @@ Rules:
 - Root category has null ParentCategoryID.
 - A category cannot be its own parent.
 - Application logic must prevent cycles when moving categories.
-- If categories support moving later, perform cycle checks before update.
+- Soft-delete policy:
+  - Soft delete is supported (`IsDeleted = true`).
+  - If the category contains child categories or products: The system requires user confirmation by returning a warning with counts of impacted child categories and products. When confirmed (`force=true`), the system performs a cascade soft delete on the entire sub-tree.
+  - Reject deletion (409 Conflict) if any product within the sub-tree belongs to an active, incomplete order (status other than `COMPLETED` or `CANCELLED`).
 
 ## 8. Table: Brand
+
+Admin-configurable brand/manufacturer.
 
 | Column | PostgreSQL | Null | Notes |
 |---|---|---:|---|
 | BrandID | BIGINT IDENTITY | No | PK |
 | BrandName | NVARCHAR(150) | No | Unique |
-| Status | VARCHAR(20) | No | `ACTIVE`, `INACTIVE` |
+| Status | VARCHAR(20) | No | `ACTIVE`, `INACTIVE` / `LOCKED` |
 | CreatedAt | DATETIME2 | No | |
 | UpdatedAt | DATETIME2 | No | |
 | IsDeleted | BOOLEAN | No | Default false; soft delete flag |
 
-The business requirement includes Brand as common product information but does not define a full Brand-management workflow. CRUD scope is `TBD`.
+Rules:
+- Unique `BrandName`.
+- Admin manages full CRUD (Create, Read/Filter, Update, Lock/Unlock, Soft Delete).
+- Cannot delete if referenced by existing active products.
 
 ## 9. Table: Unit
 
@@ -184,12 +204,15 @@ Admin-configurable selling unit.
 |---|---|---:|---|
 | UnitID | BIGINT IDENTITY | No | PK |
 | UnitName | NVARCHAR(50) | No | `m`, `cái`, `tấm`, etc. |
-| Status | VARCHAR(20) | No | `ACTIVE`, `INACTIVE` |
+| Status | VARCHAR(20) | No | `ACTIVE`, `INACTIVE` / `LOCKED` |
 | CreatedAt | DATETIME2 | No | |
 | UpdatedAt | DATETIME2 | No | |
 | IsDeleted | BOOLEAN | No | Default false; soft delete flag |
 
-Unique `UnitName`.
+Rules:
+- Unique `UnitName`.
+- Admin manages full CRUD (Create, Read/Filter, Update, Lock/Unlock, Soft Delete).
+- Cannot delete if referenced by existing active product prices.
 
 ## 10. Table: Product
 
@@ -208,7 +231,10 @@ Unique `UnitName`.
 
 `INACTIVE` means the product is locked/unavailable for new orders.
 
-Do not physically delete a product that is referenced by historical OrderItem rows. Prefer locking/deactivation.
+Soft-delete policy:
+- Soft delete is supported (`IsDeleted = true`) even if the product was referenced in completed (`COMPLETED`) or cancelled (`CANCELLED`) historical orders, as historical orders preserve immutable snapshots.
+- Reject deletion (409 Conflict) ONLY WHEN the product is currently part of an incomplete order (status: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPING`).
+- Soft deleting a product automatically marks its associated variants (`ProductVariant`) and images (`ProductImage`) as `IsDeleted = true`.
 
 ## 11. Table: ProductImage
 
@@ -231,11 +257,21 @@ Application/service rules:
 
 ## 12. Table: Color
 
+Admin-configurable manufacturing color.
+
 | Column | PostgreSQL | Null | Notes |
 |---|---|---:|---|
 | ColorID | BIGINT IDENTITY | No | PK |
-| ColorName | NVARCHAR(100) | Yes | Manufacturing color |
+| ColorName | NVARCHAR(100) | No | Manufacturing color (Unique) |
+| Status | VARCHAR(20) | No | `ACTIVE`, `INACTIVE` / `LOCKED` |
+| CreatedAt | DATETIME2 | No | |
+| UpdatedAt | DATETIME2 | No | |
 | IsDeleted | BOOLEAN | No | Default false; soft delete flag |
+
+Rules:
+- Unique `ColorName`.
+- Admin manages full CRUD (Create, Read/Filter, Update, Lock/Unlock, Soft Delete).
+- Cannot delete if referenced by existing product variants.
 
 ## 13. Table: ProductVariant
 

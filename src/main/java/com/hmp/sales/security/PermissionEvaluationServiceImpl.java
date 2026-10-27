@@ -52,6 +52,15 @@ public class PermissionEvaluationServiceImpl implements PermissionEvaluationServ
 
     /**
      * {@inheritDoc}
+     */
+    @Override
+    public boolean hasPermission(String permissionName) {
+        Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return hasPermission(auth, permissionName);
+    }
+
+    /**
+     * {@inheritDoc}
      * <p>
      * Ủy thác kiểm tra cho {@link #hasPermission(Authentication, String)}
      * với quyền {@code PRODUCT_PRICE_VIEW}.
@@ -59,5 +68,13 @@ public class PermissionEvaluationServiceImpl implements PermissionEvaluationServ
     @Override
     public boolean canViewProductPrice(Authentication authentication) {
         return hasPermission(authentication, PRODUCT_PRICE_VIEW);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean canViewProductPrice() {
+        return hasPermission(PRODUCT_PRICE_VIEW);
     }
 }

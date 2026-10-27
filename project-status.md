@@ -1,6 +1,6 @@
 # Project Status
 
-> Last updated: 2026-10-21 | By: @antigravity | Session: #5
+> Last updated: 2026-10-27 | By: @antigravity | Session: #6
 >
 > AI: update this file at the end of every session when asked.
 > Follow this exact format. Preserve full milestone checklists and project specifications.
@@ -8,6 +8,27 @@
 ---
 
 ## Completed
+- ✅ **Phase 3 — Catalog & Category Hierarchy completed**:
+  - `Category` entity & `CategoryRepository`: Cấu trúc cây tự tham chiếu cha - con (`parent_category_id`), phát hiện và chặn quan hệ vòng (cycle detection), hỗ trợ mô hình quản lý giống hệ thống thư mục (tạo danh mục con hoặc sản phẩm trực tiếp dưới danh mục hiện tại).
+  - Master data động do Admin quản trị (`Brand`, `Unit`, `Color`):
+    - Đầy đủ Entity, Repository, Service (`BrandService`, `UnitService`, `ColorService`), Controller (`/api/v1/admin/brands/**`, `/api/v1/admin/units/**`, `/api/v1/admin/colors/**`).
+    - Hỗ trợ CRUD, phân trang, tìm kiếm, khóa/mở khóa (`ACTIVE`/`LOCKED`), kiểm tra ràng buộc toàn vẹn chặn xóa (409 Conflict) nếu đã có sản phẩm/bảng giá/biến thể liên kết.
+    - Cung cấp các endpoint Public GET phục vụ dropdown chọn thương hiệu, đơn vị tính, màu sắc (`/api/v1/brands`, `/api/v1/units`, `/api/v1/colors`).
+  - `Product`, `ProductImage`, `ProductVariant`, `ProductColor`, `ProductPrice`:
+    - `Product`: Quản lý thông tin chung, Brand, Category, trạng thái (`ACTIVE`, `INACTIVE`), người tạo.
+    - `ProductImage`: Ràng buộc tối đa 1 ảnh đại diện (`isPrimary = true`), tối đa 10 ảnh phụ (tổng tối đa 11 ảnh cho 1 sản phẩm).
+    - `ProductVariant`: Thông số kỹ thuật sản xuất (`typeValue`, `thickness`), mã biến thể duy nhất, màu sắc liên kết qua `ProductColor`.
+    - `ProductPrice`: Ánh xạ giá bán linh hoạt theo đơn vị tính (`(variantId, unitId) -> price`), tính theo số nguyên VND (`INT`/`BIGINT`).
+  - Bảo mật & Phân quyền hiển thị giá (Price Visibility):
+    - Sử dụng quyền động `PRODUCT_PRICE_VIEW` kiểm tra qua `PermissionEvaluationService` (tự động lấy Authentication từ SecurityContext).
+    - Khi caller thiếu quyền: ẩn giá (`prices = null`), chặn sắp xếp theo giá (`sortBy=price` ném ngoại lệ `BusinessRuleException` tránh rò rỉ thông tin giá gián tiếp).
+  - Ràng buộc toàn vẹn & Cơ chế Xóa mềm (Soft Delete):
+    - `Category`: Nếu rỗng -> xóa mềm ngay; nếu chứa con/sản phẩm và `force=false` -> trả về 409 Conflict kèm payload số lượng con (`ConflictWithPayloadException`) để frontend hiển thị confirm popup; nếu `force=true` -> xóa mềm cascade nếu không có sản phẩm nào nằm trong đơn hàng dở dang.
+    - `Product`: Cho phép xóa mềm ngay cả khi có đơn hàng lịch sử (`COMPLETED`/`CANCELLED`); chỉ chặn xóa (409 Conflict) khi sản phẩm đang nằm trong đơn hàng chưa hoàn thành (`PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPING`).
+  - Dữ liệu mẫu thực tế trong `DataInitializer`:
+    - Seed đầy đủ quyền catalog cho `ADMIN` và `MANAGER`.
+    - Khởi tạo thương hiệu tôn (Hoa Sen, Đông Á, Nam Kim), đơn vị tính (m, tấm, cuộn, cái), màu sắc (Xanh ngọc, Đỏ đậm, Xanh rêu,...), cây danh mục tôn lợp mái, phụ kiện và sản phẩm mẫu có biến thể, bảng giá.
+  - Toàn bộ 157/157 tests pass (thêm 57 test cases mới cho Phase 3 bao gồm Service tests và Controller MockMvc tests).
 - ✅ **Phase 2 — Authentication, Tokens & OTP completed**:
   - `GoogleAuthService` & `GoogleAuthServiceImpl`: Xác thực Google ID Token qua endpoint Google TokenInfo (`https://oauth2.googleapis.com/tokeninfo`) sử dụng `RestClient`.
   - `JwtTokenService` & `JwtTokenServiceImpl`: Cấp phát JWT Access Token (HMAC-SHA256) chứa claims `sub`, `email`, `roles`, `jti`, `exp` (bỏ qua `permissions` để hỗ trợ phân quyền động in-memory), tự động đăng ký `auth:access:{jti}` vào Redis với TTL.
@@ -117,10 +138,11 @@ _Nothing._
 - ⚠️ **Scope Protection**: Do NOT implement V1 excluded modules (payment gateways, promotions, reviews, inventory, quotation, warranty, laser cutting, blogs).
 
 ## Next Tasks
-1. **[P1]** Implement Phase 2: Google OAuth token verification & user account resolution (`POST /api/v1/auth/google`).
-2. **[P1]** Implement Phase 2: JWT token generation service (embed roles & permissions, register `auth:access:{jti}` in Redis).
-3. **[P1]** Implement Phase 2: RefreshToken entity, repository & rotation mechanism with token family reuse detection.
-4. **[P1]** Implement Phase 2: Redis phone OTP service with rate limiting and single-use verification.
+1. **[P1]** Implement Phase 4: Customer Address entity, repository, and CRUD APIs (`GET/POST/PATCH/DELETE /api/v1/me/addresses`).
+2. **[P1]** Implement Phase 4: Customer profile APIs (`GET /api/v1/me`, `PATCH /api/v1/me`).
+3. **[P1]** Implement Phase 4: Order & OrderItem entities with immutable price snapshots (`UnitPrice`, `TotalPrice`, `TotalAmount`).
+4. **[P1]** Implement Phase 4: Customer order creation with phone OTP verification & direct PostgreSQL persistence (`PENDING` state).
+5. **[P1]** Implement Phase 4: Manager order calculation (`TotalPrice = UnitPrice × Size × Quantity`) and lifecycle transitions (`PENDING -> CONFIRMED -> PROCESSING -> COMPLETED`).
 
 ## Milestones
 
@@ -163,26 +185,34 @@ _Nothing._
 - [x] Auth & OTP unit and integration tests (100/100 tests pass)
 
 ### Phase 3 — Catalog & Category Hierarchy
-- [ ] Category entity (self-referencing parent-child tree) & repository
-- [ ] Category tree validation (prevent circular hierarchy references)
-- [ ] Brand entity & CRUD repository
-- [ ] Unit entity & CRUD repository
-- [ ] Product entity (`ACTIVE`/`INACTIVE` status, SKU, Brand, Category, Unit references)
-- [ ] ProductImage entity (1 primary image constraint, max 10 secondary images)
-- [ ] ProductVariant entity (spec, thickness, SKU, active state)
-- [ ] Color & ProductColor entities & repositories
-- [ ] ProductPrice entity & repository
-- [ ] Product status management (active/locking logic: prevent ordering inactive products)
-- [ ] Public catalog APIs:
-  - [ ] `GET /api/v1/categories/tree` (hierarchical category tree)
-  - [ ] `GET /api/v1/products` (filter, sort, search, conditional price visibility based on `PRODUCT_PRICE_VIEW`)
-  - [ ] `GET /api/v1/products/{productId}` (detail, variants, images, conditional price visibility)
-- [ ] Manager catalog management APIs:
-  - [ ] Create child category or product under current category
-  - [ ] Category CRUD & display order updates
-  - [ ] Product CRUD, image management, variant management
-  - [ ] Product lock/unlock endpoint
-- [ ] Catalog unit and integration tests
+- [x] Category entity (self-referencing parent-child tree) & repository
+- [x] Category tree validation (prevent circular hierarchy references)
+- [x] Master data entities & CRUD repositories:
+  - [x] Brand entity & repository (`ACTIVE`/`LOCKED`, soft-delete)
+  - [x] Unit entity & repository (`ACTIVE`/`LOCKED`, soft-delete)
+  - [x] Color entity & repository (`ACTIVE`/`LOCKED`, soft-delete)
+- [x] Product entity (`ACTIVE`/`INACTIVE` status, Brand, Category references)
+- [x] ProductImage entity (1 primary image constraint, max 10 secondary images)
+- [x] ProductVariant entity (spec, thickness, variantCode, active state)
+- [x] ProductColor entity & composite repository
+- [x] ProductPrice entity & composite repository (by variant and unit, VND integers)
+- [x] Product status management (active/locking logic: prevent ordering inactive products)
+- [x] Public catalog & master data APIs:
+  - [x] `GET /api/v1/categories/tree` (hierarchical category tree)
+  - [x] `GET /api/v1/categories/{categoryId}/products` (products in category)
+  - [x] `GET /api/v1/brands`, `GET /api/v1/units`, `GET /api/v1/colors` (active master data for browsing/filters)
+  - [x] `GET /api/v1/products` (filter, sort, search, conditional price visibility based on `PRODUCT_PRICE_VIEW`)
+  - [x] `GET /api/v1/products/{productId}` (detail, variants, images, conditional price visibility)
+- [x] Manager catalog management APIs:
+  - [x] Create child category or product under current category
+  - [x] Category CRUD & display order updates
+  - [x] Product CRUD, image management, variant management
+  - [x] Product lock/unlock endpoint
+- [x] Admin master data management APIs (Dynamic CRUD for Brand, Unit, Color):
+  - [x] Brand CRUD, search/pagination, lock/unlock (`/api/v1/admin/brands/**`)
+  - [x] Unit CRUD, search/pagination, lock/unlock (`/api/v1/admin/units/**`)
+  - [x] Color CRUD, search/pagination, lock/unlock (`/api/v1/admin/colors/**`)
+- [x] Catalog unit and integration tests (157/157 tests pass)
 
 ### Phase 4 — Ordering & Manufacturing Price Calculation
 - [ ] CustomerAddress entity, repository, and CRUD APIs (`GET/POST/PATCH/DELETE /api/v1/me/addresses`)
