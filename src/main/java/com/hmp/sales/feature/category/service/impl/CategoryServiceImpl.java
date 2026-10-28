@@ -247,6 +247,19 @@ public class CategoryServiceImpl implements CategoryService {
 
     /** {@inheritDoc} */
     @Override
+    @Transactional(readOnly = true)
+    public CategoryProductsResponse getAllProductsByCategory(Long categoryId) {
+        Category category = findActiveCategory(categoryId);
+        List<Product> products = productRepository.findByCategoryIdAndIsDeletedFalse(categoryId);
+        boolean priceVisible = permissionEvaluationService.canViewProductPrice();
+        List<ProductSummaryResponse> productDtos = products.stream()
+                .map(p -> ProductSummaryResponse.fromEntity(p, priceVisible))
+                .toList();
+        return new CategoryProductsResponse(category.getId(), category.getCategoryName(), productDtos);
+    }
+
+    /** {@inheritDoc} */
+    @Override
     @Transactional
     public CategoryResponse lockCategory(Long categoryId) {
         Category category = findActiveCategory(categoryId);

@@ -168,6 +168,7 @@ public class DataInitializer implements ApplicationRunner {
             new Object[]{"PRODUCT_VARIANT_UNLOCK",    "PRODUCT",  "/api/v1/manager/products/**/variants/**/unlock", "POST", "Mở khóa biến thể sản phẩm"},
             new Object[]{"PRODUCT_VARIANT_DELETE",    "PRODUCT",  "/api/v1/manager/products/**/variants/**",      "DELETE", "Xóa biến thể sản phẩm"},
             // --- CATEGORY module ---
+            new Object[]{"PRODUCT_CATEGORY_VIEW",     "CATEGORY", "/api/v1/manager/categories/**",                "GET",    "Xem danh mục và sản phẩm quản lý"},
             new Object[]{"PRODUCT_CATEGORY_CREATE",   "CATEGORY", "/api/v1/manager/categories/**",                "POST",   "Tạo danh mục sản phẩm"},
             new Object[]{"PRODUCT_CATEGORY_UPDATE",   "CATEGORY", "/api/v1/manager/categories/**",                "PATCH",  "Cập nhật danh mục sản phẩm"},
             new Object[]{"PRODUCT_CATEGORY_LOCK",     "CATEGORY", "/api/v1/manager/categories/**/lock",          "POST",   "Khóa danh mục sản phẩm"},
@@ -245,6 +246,10 @@ public class DataInitializer implements ApplicationRunner {
 
     private static final Set<String> ADMIN_PERMISSIONS = Set.of(
             "PRODUCT_VIEW", "PRODUCT_PRICE_VIEW",
+            "PRODUCT_CATEGORY_VIEW", "PRODUCT_CATEGORY_CREATE", "PRODUCT_CATEGORY_UPDATE", "PRODUCT_CATEGORY_LOCK", "PRODUCT_CATEGORY_UNLOCK", "PRODUCT_CATEGORY_DELETE",
+            "PRODUCT_CREATE", "PRODUCT_UPDATE", "PRODUCT_LOCK", "PRODUCT_UNLOCK", "PRODUCT_DELETE",
+            "PRODUCT_IMAGE_MANAGE", "PRODUCT_IMAGE_DELETE",
+            "PRODUCT_VARIANT_CREATE", "PRODUCT_VARIANT_UPDATE", "PRODUCT_VARIANT_LOCK", "PRODUCT_VARIANT_UNLOCK", "PRODUCT_VARIANT_DELETE",
             "BRAND_VIEW_ALL", "BRAND_CREATE", "BRAND_UPDATE", "BRAND_LOCK", "BRAND_UNLOCK", "BRAND_DELETE",
             "UNIT_VIEW_ALL", "UNIT_CREATE", "UNIT_UPDATE", "UNIT_LOCK", "UNIT_UNLOCK", "UNIT_DELETE",
             "COLOR_VIEW_ALL", "COLOR_CREATE", "COLOR_UPDATE", "COLOR_LOCK", "COLOR_UNLOCK", "COLOR_DELETE",
@@ -258,7 +263,7 @@ public class DataInitializer implements ApplicationRunner {
             "PRODUCT_CREATE", "PRODUCT_UPDATE", "PRODUCT_LOCK", "PRODUCT_UNLOCK", "PRODUCT_DELETE",
             "PRODUCT_IMAGE_MANAGE", "PRODUCT_IMAGE_DELETE",
             "PRODUCT_VARIANT_CREATE", "PRODUCT_VARIANT_UPDATE", "PRODUCT_VARIANT_LOCK", "PRODUCT_VARIANT_UNLOCK", "PRODUCT_VARIANT_DELETE",
-            "PRODUCT_CATEGORY_CREATE", "PRODUCT_CATEGORY_UPDATE", "PRODUCT_CATEGORY_LOCK", "PRODUCT_CATEGORY_UNLOCK", "PRODUCT_CATEGORY_DELETE",
+            "PRODUCT_CATEGORY_VIEW", "PRODUCT_CATEGORY_CREATE", "PRODUCT_CATEGORY_UPDATE", "PRODUCT_CATEGORY_LOCK", "PRODUCT_CATEGORY_UNLOCK", "PRODUCT_CATEGORY_DELETE",
             "ORDER_VIEW_ALL", "ORDER_CALCULATE", "ORDER_CANCEL_ANY", "ORDER_STATUS_UPDATE"
     );
 

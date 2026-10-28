@@ -4,6 +4,7 @@ import com.hmp.sales.common.exception.BusinessRuleException;
 import com.hmp.sales.common.exception.ConflictWithPayloadException;
 import com.hmp.sales.common.exception.ResourceNotFoundException;
 import com.hmp.sales.feature.category.dto.CategoryCreateRequest;
+import com.hmp.sales.feature.category.dto.CategoryProductsResponse;
 import com.hmp.sales.feature.category.dto.CategoryResponse;
 import com.hmp.sales.feature.category.dto.CategoryTreeResponse;
 import com.hmp.sales.feature.category.dto.CategoryUpdateRequest;
@@ -11,6 +12,8 @@ import com.hmp.sales.feature.category.entity.Category;
 import com.hmp.sales.feature.category.entity.CategoryStatus;
 import com.hmp.sales.feature.category.repository.CategoryRepository;
 import com.hmp.sales.feature.category.service.impl.CategoryServiceImpl;
+import com.hmp.sales.feature.product.entity.Product;
+import com.hmp.sales.feature.product.entity.ProductStatus;
 import com.hmp.sales.feature.product.repository.ProductRepository;
 import com.hmp.sales.feature.user.entity.User;
 import com.hmp.sales.feature.user.repository.UserRepository;
@@ -212,5 +215,69 @@ class CategoryServiceImplTest {
 
         CategoryResponse unlocked = categoryService.unlockCategory(10L);
         assertThat(unlocked.status()).isEqualTo(CategoryStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("getAllProductsByCategory trả về cả sản phẩm ACTIVE và INACTIVE cho quản lý")
+    void getAllProductsByCategory_returnsActiveAndInactiveProducts() {
+        when(categoryRepository.findByIdAndIsDeletedFalse(10L)).thenReturn(Optional.of(rootCategory));
+
+        Product activeProduct = Product.builder()
+                .id(101L)
+                .productName("Tôn 5 sóng")
+                .status(ProductStatus.ACTIVE)
+                .category(rootCategory)
+                .images(List.of())
+                .isDeleted(false)
+                .build();
+
+        Product inactiveProduct = Product.builder()
+                .id(102L)
+                .productName("Tôn cũ ngừng bán")
+                .status(ProductStatus.INACTIVE)
+                .category(rootCategory)
+                .images(List.of())
+                .isDeleted(false)
+                .build();
+
+        when(productRepository.findByCategoryIdAndIsDeletedFalse(10L))
+                .thenReturn(List.of(activeProduct, inactiveProduct));
+        when(permissionEvaluationService.canViewProductPrice()).thenReturn(true);
+
+        CategoryProductsResponse response = categoryService.getAllProductsByCategory(10L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.categoryId()).isEqualTo(10L);
+        assertThat(response.categoryName()).isEqualTo("Tôn lợp mái");
+        assertThat(response.products()).hasSize(2);
+        assertThat(response.products()).extracting("status")
+                .containsExactly(ProductStatus.ACTIVE, ProductStatus.INACTIVE);
+    }
+
+    @Test
+    @DisplayName("getProductsByCategory chỉ trả về sản phẩm ACTIVE cho public")
+    void getProductsByCategory_returnsOnlyActiveProducts() {
+        when(categoryRepository.findByIdAndIsDeletedFalse(10L)).thenReturn(Optional.of(rootCategory));
+
+        Product activeProduct = Product.builder()
+                .id(101L)
+                .productName("Tôn 5 sóng")
+                .status(ProductStatus.ACTIVE)
+                .category(rootCategory)
+                .images(List.of())
+                .isDeleted(false)
+                .build();
+
+        when(productRepository.findByCategoryIdAndStatusAndIsDeletedFalse(10L, ProductStatus.ACTIVE))
+                .thenReturn(List.of(activeProduct));
+        when(permissionEvaluationService.canViewProductPrice()).thenReturn(false);
+
+        CategoryProductsResponse response = categoryService.getProductsByCategory(10L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.categoryId()).isEqualTo(10L);
+        assertThat(response.products()).hasSize(1);
+        assertThat(response.products().get(0).status()).isEqualTo(ProductStatus.ACTIVE);
+        assertThat(response.products().get(0).priceVisible()).isFalse();
     }
 }

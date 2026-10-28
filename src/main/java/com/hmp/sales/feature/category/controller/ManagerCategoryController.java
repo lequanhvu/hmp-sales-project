@@ -1,7 +1,9 @@
 package com.hmp.sales.feature.category.controller;
 
 import com.hmp.sales.common.response.ApiSuccessResponse;
+import com.hmp.sales.common.util.SecurityUtils;
 import com.hmp.sales.feature.category.dto.CategoryCreateRequest;
+import com.hmp.sales.feature.category.dto.CategoryProductsResponse;
 import com.hmp.sales.feature.category.dto.CategoryResponse;
 import com.hmp.sales.feature.category.dto.CategoryUpdateRequest;
 import com.hmp.sales.feature.category.service.CategoryService;
@@ -44,7 +46,7 @@ public class ManagerCategoryController {
     public ResponseEntity<ApiSuccessResponse<CategoryResponse>> createRootCategory(
             @Valid @RequestBody CategoryCreateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        Long managerId = extractUserId(jwt);
+        Long managerId = SecurityUtils.extractUserId(jwt);
         CategoryResponse response = categoryService.createRootCategory(request, managerId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiSuccessResponse.created("Tạo danh mục gốc thành công.", response));
@@ -63,7 +65,7 @@ public class ManagerCategoryController {
             @PathVariable Long parentId,
             @Valid @RequestBody CategoryCreateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        Long managerId = extractUserId(jwt);
+        Long managerId = SecurityUtils.extractUserId(jwt);
         CategoryResponse response = categoryService.createChildCategory(parentId, request, managerId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiSuccessResponse.created("Tạo danh mục con thành công.", response));
@@ -111,6 +113,20 @@ public class ManagerCategoryController {
     }
 
     /**
+     * Lấy danh sách toàn bộ sản phẩm (bao gồm cả ACTIVE và INACTIVE) thuộc một danh mục.
+     * Dành riêng cho Quản lý (Manager) và Quản trị viên (Admin) phục vụ công tác điều hành.
+     *
+     * @param categoryId ID danh mục cần lấy danh sách sản phẩm
+     * @return danh sách sản phẩm (cả active và inactive) trong danh mục
+     */
+    @GetMapping("/{categoryId}/products")
+    public ResponseEntity<ApiSuccessResponse<CategoryProductsResponse>> getProductsByCategory(
+            @PathVariable Long categoryId) {
+        CategoryProductsResponse response = categoryService.getAllProductsByCategory(categoryId);
+        return ResponseEntity.ok(ApiSuccessResponse.success(response));
+    }
+
+    /**
      * Xóa mềm danh mục sản phẩm.
      * <p>
      * Nếu danh mục còn chứa danh mục con hoặc sản phẩm:
@@ -129,15 +145,5 @@ public class ManagerCategoryController {
             @RequestParam(defaultValue = "false") boolean force) {
         categoryService.deleteCategory(categoryId, force);
         return ResponseEntity.ok(ApiSuccessResponse.success("Xóa danh mục thành công.", null));
-    }
-
-    /**
-     * Trích xuất ID người dùng từ JWT claims.
-     *
-     * @param jwt đối tượng JWT xác thực
-     * @return ID người dùng
-     */
-    private Long extractUserId(Jwt jwt) {
-        return Long.parseLong(jwt.getSubject());
     }
 }

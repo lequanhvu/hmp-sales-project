@@ -29,9 +29,19 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * Lấy danh sách sản phẩm ACTIVE thuộc một danh mục cụ thể.
      *
      * @param categoryId ID danh mục cần lấy sản phẩm
+     * @param status     trạng thái sản phẩm (ACTIVE)
      * @return danh sách sản phẩm ACTIVE trong danh mục
      */
     List<Product> findByCategoryIdAndStatusAndIsDeletedFalse(Long categoryId, ProductStatus status);
+
+    /**
+     * Lấy danh sách tất cả sản phẩm (bao gồm cả ACTIVE và INACTIVE) thuộc một danh mục cụ thể chưa bị xóa mềm.
+     * Dành riêng cho màn hình điều hành của Quản lý (Manager) và Quản trị viên (Admin).
+     *
+     * @param categoryId ID danh mục cần lấy sản phẩm
+     * @return danh sách tất cả sản phẩm thuộc danh mục
+     */
+    List<Product> findByCategoryIdAndIsDeletedFalse(Long categoryId);
 
     /**
      * Tìm kiếm sản phẩm theo tên và tên danh mục với phân trang.

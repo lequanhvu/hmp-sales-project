@@ -72,6 +72,16 @@ public interface CategoryService {
     CategoryProductsResponse getProductsByCategory(Long categoryId);
 
     /**
+     * Lấy thông tin danh mục và danh sách tất cả sản phẩm (bao gồm cả ACTIVE và INACTIVE) trực thuộc.
+     * Dành cho màn hình điều hành của Quản lý (Manager) và Quản trị viên (Admin).
+     *
+     * @param categoryId ID danh mục
+     * @return danh sách tất cả sản phẩm thuộc danh mục
+     * @throws com.hmp.sales.common.exception.ResourceNotFoundException nếu không tìm thấy danh mục
+     */
+    CategoryProductsResponse getAllProductsByCategory(Long categoryId);
+
+    /**
      * Khóa danh mục (chuyển sang LOCKED).
      *
      * @param categoryId ID danh mục

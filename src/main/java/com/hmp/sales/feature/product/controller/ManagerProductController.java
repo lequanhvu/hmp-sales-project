@@ -1,6 +1,7 @@
 package com.hmp.sales.feature.product.controller;
 
 import com.hmp.sales.common.response.ApiSuccessResponse;
+import com.hmp.sales.common.util.SecurityUtils;
 import com.hmp.sales.feature.product.dto.*;
 import com.hmp.sales.feature.product.service.ProductService;
 import jakarta.validation.Valid;
@@ -49,7 +50,7 @@ public class ManagerProductController {
             @PathVariable Long categoryId,
             @Valid @RequestBody ProductCreateRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        Long managerId = extractUserId(jwt);
+        Long managerId = SecurityUtils.extractUserId(jwt);
         ProductDetailResponse response = productService.createProduct(categoryId, request, managerId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiSuccessResponse.created("Tạo sản phẩm thành công.", response));
@@ -220,15 +221,5 @@ public class ManagerProductController {
             @PathVariable Long variantId) {
         productService.deleteVariant(productId, variantId);
         return ResponseEntity.ok(ApiSuccessResponse.success("Xóa biến thể thành công.", null));
-    }
-
-    /**
-     * Trích xuất ID người dùng từ JWT claims.
-     *
-     * @param jwt đối tượng JWT xác thực
-     * @return ID người dùng
-     */
-    private Long extractUserId(Jwt jwt) {
-        return Long.parseLong(jwt.getSubject());
     }
 }

@@ -1,6 +1,7 @@
 package com.hmp.sales.feature.user.controller;
 
 import com.hmp.sales.common.response.ApiSuccessResponse;
+import com.hmp.sales.common.util.SecurityUtils;
 import com.hmp.sales.feature.user.dto.RolePermissionsResponse;
 import com.hmp.sales.feature.user.dto.UpdateRolePermissionsRequest;
 import com.hmp.sales.feature.user.service.RoleService;
@@ -72,18 +73,8 @@ public class RoleController {
             @PathVariable Integer roleId,
             @RequestBody @Valid UpdateRolePermissionsRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        Long actorId = extractActorId(jwt);
+        Long actorId = SecurityUtils.extractUserId(jwt);
         RolePermissionsResponse response = roleService.updateRolePermissions(roleId, request, actorId);
         return ResponseEntity.ok(ApiSuccessResponse.success("Cập nhật quyền cho vai trò thành công.", response));
-    }
-
-    /**
-     * Trích xuất ID người dùng từ JWT subject claim.
-     *
-     * @param jwt JWT của người dùng đang xác thực
-     * @return ID người dùng
-     */
-    private Long extractActorId(Jwt jwt) {
-        return Long.parseLong(jwt.getSubject());
     }
 }

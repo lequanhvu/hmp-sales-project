@@ -1668,6 +1668,65 @@ Business rules:
 }
 ```
 
+## 9.6 Get products by category (Manager & Admin)
+
+```http
+GET /api/v1/manager/categories/{categoryId}/products
+```
+
+Returns all non-deleted products under the given category, including both `ACTIVE` and `INACTIVE` products, for operational and inventory management by Managers and Admins.
+
+Requires permission `PRODUCT_CATEGORY_VIEW` (granted to `ADMIN` and `MANAGER`).
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "categoryId": 1,
+    "categoryName": "Tôn lợp mái",
+    "products": [
+      {
+        "id": 1,
+        "productName": "Tôn Hoa Sen 11 sóng vuông",
+        "status": "ACTIVE",
+        "categoryId": 1,
+        "categoryName": "Tôn lợp mái",
+        "brandId": 1,
+        "brandName": "Tôn Hoa Sen",
+        "primaryImageUrl": "https://cdn.example.com/products/ton-hoa-sen-1.jpg",
+        "priceVisible": true
+      },
+      {
+        "id": 2,
+        "productName": "Tôn sóng cũ ngừng sản xuất",
+        "status": "INACTIVE",
+        "categoryId": 1,
+        "categoryName": "Tôn lợp mái",
+        "brandId": 1,
+        "brandName": "Tôn Hoa Sen",
+        "primaryImageUrl": null,
+        "priceVisible": true
+      }
+    ]
+  },
+  "message": "Thành công",
+  "timestamp": "2026-10-28T20:00:00"
+}
+```
+
+### Failure response — 404
+
+```json
+{
+  "statusCode": 404,
+  "data": null,
+  "message": "Không tìm thấy danh mục ID: 99",
+  "timestamp": "2026-10-28T20:00:00"
+}
+```
+
 ---
 
 # 10. Manager product APIs

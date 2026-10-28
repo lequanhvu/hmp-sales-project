@@ -4,9 +4,12 @@ import com.hmp.sales.common.exception.ConflictWithPayloadException;
 import com.hmp.sales.common.exception.GlobalExceptionHandler;
 import com.hmp.sales.feature.category.dto.CategoryCreateRequest;
 import com.hmp.sales.feature.category.dto.CategoryDeleteWarningResponse;
+import com.hmp.sales.feature.category.dto.CategoryProductsResponse;
 import com.hmp.sales.feature.category.dto.CategoryResponse;
 import com.hmp.sales.feature.category.entity.CategoryStatus;
 import com.hmp.sales.feature.category.service.CategoryService;
+import com.hmp.sales.feature.product.dto.ProductSummaryResponse;
+import com.hmp.sales.feature.product.entity.ProductStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -124,5 +127,28 @@ class ManagerCategoryControllerTest {
         mockMvc.perform(delete("/api/v1/manager/categories/10?force=true"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.statusCode").value(200));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/manager/categories/{id}/products - Lấy danh sách sản phẩm (cả ACTIVE và INACTIVE) 200 OK")
+    void getProductsByCategory_returnsAllProducts() throws Exception {
+        ProductSummaryResponse p1 = new ProductSummaryResponse(
+                101L, "Tôn 5 sóng", ProductStatus.ACTIVE, 10L, "Tôn lợp mái", 1L, "Hoa Sen", null, true);
+        ProductSummaryResponse p2 = new ProductSummaryResponse(
+                102L, "Tôn ngừng bán", ProductStatus.INACTIVE, 10L, "Tôn lợp mái", 1L, "Hoa Sen", null, true);
+
+        CategoryProductsResponse response = new CategoryProductsResponse(
+                10L, "Tôn lợp mái", java.util.List.of(p1, p2));
+
+        when(categoryService.getAllProductsByCategory(10L)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/manager/categories/10/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.statusCode").value(200))
+                .andExpect(jsonPath("$.data.categoryId").value(10))
+                .andExpect(jsonPath("$.data.products").isArray())
+                .andExpect(jsonPath("$.data.products.length()").value(2))
+                .andExpect(jsonPath("$.data.products[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.products[1].status").value("INACTIVE"));
     }
 }

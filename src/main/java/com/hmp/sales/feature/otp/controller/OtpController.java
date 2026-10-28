@@ -1,6 +1,7 @@
 package com.hmp.sales.feature.otp.controller;
 
 import com.hmp.sales.common.response.ApiSuccessResponse;
+import com.hmp.sales.common.util.SecurityUtils;
 import com.hmp.sales.feature.otp.dto.OtpRequest;
 import com.hmp.sales.feature.otp.dto.OtpVerifyRequest;
 import com.hmp.sales.feature.otp.dto.OtpVerifyResponse;
@@ -70,26 +71,9 @@ public class OtpController {
     public ResponseEntity<ApiSuccessResponse<OtpVerifyResponse>> verifyOtp(
             @Valid @RequestBody OtpVerifyRequest request,
             Authentication authentication) {
-        Long userId = extractUserId(authentication);
+        Long userId = SecurityUtils.extractUserId(authentication);
         phoneOtpService.verifyOtp(request.phone(), request.otp(), userId);
         OtpVerifyResponse response = new OtpVerifyResponse(true, request.phone());
         return ResponseEntity.ok(ApiSuccessResponse.success("Xác thực số điện thoại thành công", response));
-    }
-
-    /**
-     * Trích xuất User ID từ thông tin xác thực.
-     *
-     * @param authentication thông tin xác thực người dùng
-     * @return ID người dùng dạng Long, hoặc null nếu chưa xác thực hoặc không hợp lệ
-     */
-    private Long extractUserId(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            return null;
-        }
-        try {
-            return Long.parseLong(authentication.getName());
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 }

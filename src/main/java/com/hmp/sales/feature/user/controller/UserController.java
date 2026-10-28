@@ -2,6 +2,7 @@ package com.hmp.sales.feature.user.controller;
 
 import com.hmp.sales.common.response.ApiSuccessResponse;
 import com.hmp.sales.common.response.PageResponse;
+import com.hmp.sales.common.util.SecurityUtils;
 import com.hmp.sales.feature.user.dto.CreateManagerRequest;
 import com.hmp.sales.feature.user.dto.UserSearchRequest;
 import com.hmp.sales.feature.user.dto.UserStatusResponse;
@@ -76,7 +77,7 @@ public class UserController {
     public ResponseEntity<ApiSuccessResponse<UserStatusResponse>> lockUser(
             @PathVariable Long userId,
             @AuthenticationPrincipal Jwt jwt) {
-        Long actorId = extractActorId(jwt);
+        Long actorId = SecurityUtils.extractUserId(jwt);
         UserStatusResponse response = userService.lockUser(userId, actorId);
         return ResponseEntity.ok(ApiSuccessResponse.success("Khóa tài khoản thành công.", response));
     }
@@ -94,7 +95,7 @@ public class UserController {
     public ResponseEntity<ApiSuccessResponse<UserStatusResponse>> unlockUser(
             @PathVariable Long userId,
             @AuthenticationPrincipal Jwt jwt) {
-        Long actorId = extractActorId(jwt);
+        Long actorId = SecurityUtils.extractUserId(jwt);
         UserStatusResponse response = userService.unlockUser(userId, actorId);
         return ResponseEntity.ok(ApiSuccessResponse.success("Mở khóa tài khoản thành công.", response));
     }
@@ -113,7 +114,7 @@ public class UserController {
     public ResponseEntity<ApiSuccessResponse<Void>> deleteUser(
             @PathVariable Long userId,
             @AuthenticationPrincipal Jwt jwt) {
-        Long actorId = extractActorId(jwt);
+        Long actorId = SecurityUtils.extractUserId(jwt);
         userService.softDeleteUser(userId, actorId);
         return ResponseEntity.ok(ApiSuccessResponse.success("Xóa tài khoản thành công.", null));
     }
@@ -132,19 +133,9 @@ public class UserController {
     public ResponseEntity<ApiSuccessResponse<UserSummaryResponse>> createManager(
             @RequestBody @Valid CreateManagerRequest request,
             @AuthenticationPrincipal Jwt jwt) {
-        Long actorId = extractActorId(jwt);
+        Long actorId = SecurityUtils.extractUserId(jwt);
         UserSummaryResponse response = userService.createManager(request, actorId);
         return ResponseEntity.status(201)
                 .body(ApiSuccessResponse.created("Tạo tài khoản Manager thành công.", response));
-    }
-
-    /**
-     * Trích xuất ID người dùng từ JWT subject claim.
-     *
-     * @param jwt JWT của người dùng đang xác thực
-     * @return ID người dùng
-     */
-    private Long extractActorId(Jwt jwt) {
-        return Long.parseLong(jwt.getSubject());
     }
 }
