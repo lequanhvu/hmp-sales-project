@@ -263,6 +263,7 @@ Admin-configurable manufacturing color.
 |---|---|---:|---|
 | ColorID | BIGINT IDENTITY | No | PK |
 | ColorName | NVARCHAR(100) | No | Manufacturing color (Unique) |
+| ImageURL | NVARCHAR(500) | Yes | Color swatch / sample preview image URL |
 | Status | VARCHAR(20) | No | `ACTIVE`, `INACTIVE` / `LOCKED` |
 | CreatedAt | DATETIME2 | No | |
 | UpdatedAt | DATETIME2 | No | |

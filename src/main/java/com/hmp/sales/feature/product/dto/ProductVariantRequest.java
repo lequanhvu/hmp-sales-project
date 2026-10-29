@@ -28,7 +28,8 @@ public record ProductVariantRequest(
 
         String typeValue,
 
-        BigDecimal thickness,
+        // độ dày
+        BigDecimal thickness, 
 
         List<Long> colorIds,
 

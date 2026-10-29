@@ -82,6 +82,24 @@ class ColorServiceImplTest {
     }
 
     @Test
+    @DisplayName("createColor - Tạo mới màu sắc kèm ảnh thành công")
+    void createColor_withImage_success() {
+        ColorRequest request = new ColorRequest("Đỏ đậm", "https://cdn.example.com/do-dam.png");
+        when(colorRepository.existsByColorNameAndIsDeletedFalse("Đỏ đậm")).thenReturn(false);
+        when(colorRepository.save(any(Color.class))).thenAnswer(inv -> {
+            Color c = inv.getArgument(0);
+            c.setId(2L);
+            return c;
+        });
+
+        ColorResponse response = colorService.createColor(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.colorName()).isEqualTo("Đỏ đậm");
+        assertThat(response.imageUrl()).isEqualTo("https://cdn.example.com/do-dam.png");
+    }
+
+    @Test
     @DisplayName("createColor - Tên màu sắc trùng ném BusinessRuleException")
     void createColor_duplicate_throwsException() {
         ColorRequest request = new ColorRequest("Xanh ngọc");

@@ -58,7 +58,7 @@ public class UserController {
             @RequestParam(required = false) String email,
             @RequestParam(required = false) UserStatus status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size) {
+            @RequestParam(defaultValue = "20") int size) {
         UserSearchRequest request = new UserSearchRequest(name, phone, email, status, page, size);
         Page<UserSummaryResponse> result = userService.searchUsers(request);
         return ResponseEntity.ok(ApiSuccessResponse.success(PageResponse.from(result)));

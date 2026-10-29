@@ -9,8 +9,19 @@ public record AppProperties(
     JwtProperties jwt,
     OtpProperties otp,
     OrderProperties order,
-    CorsProperties cors
+    CorsProperties cors,
+    PaginationProperties pagination,
+    ProductProperties product
 ) {
+    public AppProperties {
+        if (pagination == null) {
+            pagination = new PaginationProperties(0, 20, 100);
+        }
+        if (product == null) {
+            product = new ProductProperties(1, 10);
+        }
+    }
+
     public record JwtProperties(
         String issuer,
         String secret,
@@ -34,4 +45,29 @@ public record AppProperties(
         List<String> allowedHeaders,
         boolean allowCredentials
     ) {}
+
+    public record PaginationProperties(
+        int defaultPage,
+        int defaultPageSize,
+        int maxPageSize
+    ) {
+        public PaginationProperties {
+            if (defaultPageSize <= 0) defaultPageSize = 20;
+            if (maxPageSize <= 0) maxPageSize = 100;
+        }
+    }
+
+    public record ProductProperties(
+        int maxPrimaryImages,
+        int maxSecondaryImages
+    ) {
+        public ProductProperties {
+            if (maxPrimaryImages <= 0) maxPrimaryImages = 1;
+            if (maxSecondaryImages <= 0) maxSecondaryImages = 10;
+        }
+
+        public int maxTotalImages() {
+            return maxPrimaryImages + maxSecondaryImages;
+        }
+    }
 }

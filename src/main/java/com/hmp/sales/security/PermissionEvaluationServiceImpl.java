@@ -2,6 +2,7 @@ package com.hmp.sales.security;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 /**
@@ -55,7 +56,7 @@ public class PermissionEvaluationServiceImpl implements PermissionEvaluationServ
      */
     @Override
     public boolean hasPermission(String permissionName) {
-        Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return hasPermission(auth, permissionName);
     }
 

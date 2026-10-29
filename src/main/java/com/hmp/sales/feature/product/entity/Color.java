@@ -38,6 +38,12 @@ public class Color {
     private String colorName;
 
     /**
+     * Đường dẫn hình ảnh mẫu màu sắc (tùy chọn, tối đa 500 ký tự).
+     */
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    /**
      * Trạng thái hoạt động của màu sắc (ACTIVE hoặc LOCKED).
      */
     @Enumerated(EnumType.STRING)

@@ -53,7 +53,7 @@ class AuthServiceImplTest {
     void setUp() {
         AppProperties.JwtProperties jwtProps = new AppProperties.JwtProperties(
                 "sales-backend", "secret", 60L, 30L);
-        appProperties = new AppProperties(jwtProps, null, null, null);
+        appProperties = new AppProperties(jwtProps, null, null, null, null, null);
         authService = new AuthServiceImpl(
                 googleAuthService, jwtTokenService, refreshTokenService,
                 userRepository, roleRepository, appProperties);

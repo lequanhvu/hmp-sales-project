@@ -3,6 +3,8 @@ package com.hmp.sales.feature.product.service;
 import com.hmp.sales.feature.product.dto.*;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
+
 /**
  * Giao diện nghiệp vụ quản lý sản phẩm tôn sóng và biến thể sản phẩm (Product).
  * <p>
@@ -99,6 +101,29 @@ public interface ProductService {
     ProductImageResponse uploadProductImage(Long productId, ProductImageUploadRequest request);
 
     /**
+     * Thêm hàng loạt ảnh cho sản phẩm (hỗ trợ upload nhiều ảnh phụ cùng một lúc).
+     * Kiểm tra số lượng ảnh tải lên không vượt quá cấu hình tối đa và tổng số ảnh không vượt quá giới hạn.
+     *
+     * @param productId ID sản phẩm cần thêm ảnh
+     * @param requests  danh sách thông tin ảnh cần tải lên
+     * @return danh sách chi tiết các ảnh vừa được thêm
+     * @throws com.hmp.sales.common.exception.ResourceNotFoundException nếu không tìm thấy sản phẩm
+     * @throws com.hmp.sales.common.exception.BusinessRuleException    nếu danh sách rỗng hoặc vượt quá giới hạn ảnh
+     */
+    List<ProductImageResponse> uploadProductImages(Long productId, List<ProductImageUploadRequest> requests);
+
+    /**
+     * Quá tải tiện ích phương thức tải lên nhiều ảnh với tên uploadProductImage.
+     *
+     * @param productId ID sản phẩm cần thêm ảnh
+     * @param requests  danh sách thông tin ảnh cần tải lên
+     * @return danh sách chi tiết các ảnh vừa được thêm
+     */
+    default List<ProductImageResponse> uploadProductImage(Long productId, List<ProductImageUploadRequest> requests) {
+        return uploadProductImages(productId, requests);
+    }
+
+    /**
      * Xóa mềm ảnh sản phẩm theo ID.
      *
      * @param productId ID sản phẩm chứa ảnh
@@ -106,6 +131,26 @@ public interface ProductService {
      * @throws com.hmp.sales.common.exception.ResourceNotFoundException nếu không tìm thấy sản phẩm hoặc ảnh
      */
     void deleteProductImage(Long productId, Long imageId);
+
+    /**
+     * Xóa mềm hàng loạt ảnh của sản phẩm theo danh sách ID ảnh.
+     *
+     * @param productId ID sản phẩm chứa ảnh
+     * @param imageIds  danh sách ID ảnh cần xóa mềm
+     * @throws com.hmp.sales.common.exception.ResourceNotFoundException nếu không tìm thấy sản phẩm hoặc ảnh
+     * @throws com.hmp.sales.common.exception.BusinessRuleException    nếu danh sách ID rỗng
+     */
+    void deleteProductImages(Long productId, List<Long> imageIds);
+
+    /**
+     * Quá tải tiện ích phương thức xóa nhiều ảnh với tên deleteProductImage.
+     *
+     * @param productId ID sản phẩm chứa ảnh
+     * @param imageIds  danh sách ID ảnh cần xóa
+     */
+    default void deleteProductImage(Long productId, List<Long> imageIds) {
+        deleteProductImages(productId, imageIds);
+    }
 
     /**
      * Thêm biến thể mới cho sản phẩm, bao gồm màu sắc và bảng giá theo đơn vị tính.

@@ -171,4 +171,51 @@ class ManagerProductControllerTest {
                 .andExpect(jsonPath("$.statusCode").value(201))
                 .andExpect(jsonPath("$.data.variantCode").value("VAR-01"));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/manager/products/{id}/images/batch - Tải lên danh sách ảnh 201 Created")
+    void uploadProductImagesBatch_returns201() throws Exception {
+        ProductImageResponse img1 = new ProductImageResponse(1L, "https://img.com/1.png", false, 1);
+        ProductImageResponse img2 = new ProductImageResponse(2L, "https://img.com/2.png", false, 2);
+
+        when(productService.uploadProductImages(eq(100L), anyList()))
+                .thenReturn(List.of(img1, img2));
+
+        String json = """
+                [
+                    {
+                        "imageUrl": "https://img.com/1.png",
+                        "isPrimary": false,
+                        "displayOrder": 1
+                    },
+                    {
+                        "imageUrl": "https://img.com/2.png",
+                        "isPrimary": false,
+                        "displayOrder": 2
+                    }
+                ]
+                """;
+
+        mockMvc.perform(post("/api/v1/manager/products/100/images/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.statusCode").value(201))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].imageUrl").value("https://img.com/1.png"))
+                .andExpect(jsonPath("$.data[1].imageUrl").value("https://img.com/2.png"));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/manager/products/{id}/images/batch - Xóa danh sách ảnh 200 OK")
+    void deleteProductImagesBatch_returns200() throws Exception {
+        doNothing().when(productService).deleteProductImages(eq(100L), anyList());
+
+        mockMvc.perform(delete("/api/v1/manager/products/100/images/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[501, 502]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.statusCode").value(200))
+                .andExpect(jsonPath("$.message").value("Xóa danh sách ảnh sản phẩm thành công."));
+    }
 }

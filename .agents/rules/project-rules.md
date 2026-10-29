@@ -36,6 +36,7 @@ Do not introduce a new framework or infrastructure component without a concrete 
 - Prefer clear, explicit code over speculative abstractions.
 - Avoid generic utility classes unless there is a demonstrated reuse case.
 - Write meaningful Javadoc/comments for public classes, records, functions, DTOs, and service methods (see section 20).
+- Do not hard-code pagination parameters (`page`, `size`) or limit constraints (e.g. maximum product images) in business logic. Always declare them in `application.yaml` under `app.pagination` (`default-page-size`, `max-page-size`) and `app.product` (`max-secondary-images`), bind through `AppProperties`, and inject/access them in services and business components. (In controllers, keep `@RequestParam(defaultValue = "...")` using numeric string literals like `"0"` and `"20"` to guarantee MockMvc standalone test compatibility).
 - Do not silently change an established business rule.
 - When a requirement is not defined, mark it as `TBD` rather than inventing behavior.
 

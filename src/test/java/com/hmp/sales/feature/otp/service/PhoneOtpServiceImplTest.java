@@ -43,7 +43,7 @@ class PhoneOtpServiceImplTest {
     @BeforeEach
     void setUp() {
         AppProperties.OtpProperties otpProps = new AppProperties.OtpProperties(300, 5, 60);
-        AppProperties appProperties = new AppProperties(null, otpProps, null, null);
+        AppProperties appProperties = new AppProperties(null, otpProps, null, null, null, null);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
         otpService = new PhoneOtpServiceImpl(redisTemplate, appProperties, userRepository);
     }

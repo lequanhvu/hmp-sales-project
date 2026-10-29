@@ -53,7 +53,7 @@ class JwtTokenServiceImplTest {
                 60L,
                 30L
         );
-        appProperties = new AppProperties(jwtProps, null, null, null);
+        appProperties = new AppProperties(jwtProps, null, null, null, null, null);
 
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
         jwtTokenService = new JwtTokenServiceImpl(appProperties, redisTemplate);

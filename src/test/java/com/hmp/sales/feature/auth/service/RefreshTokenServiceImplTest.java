@@ -46,7 +46,7 @@ class RefreshTokenServiceImplTest {
                 60L,
                 30L
         );
-        appProperties = new AppProperties(jwtProps, null, null, null);
+        appProperties = new AppProperties(jwtProps, null, null, null, null, null);
         refreshTokenService = new RefreshTokenServiceImpl(refreshTokenRepository, appProperties);
 
         Role role = new Role();

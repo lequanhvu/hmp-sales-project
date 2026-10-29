@@ -10,6 +10,7 @@ import java.time.Instant;
  *
  * @param id        ID màu sắc
  * @param colorName tên màu sắc (vd: Xanh ngọc, Đỏ đậm, Xanh rêu)
+ * @param imageUrl  đường dẫn ảnh mẫu màu sắc (có thể null)
  * @param status    trạng thái hoạt động (ACTIVE/LOCKED)
  * @param createdAt thời điểm tạo
  * @param updatedAt thời điểm cập nhật lần cuối
@@ -17,10 +18,18 @@ import java.time.Instant;
 public record ColorResponse(
         Long id,
         String colorName,
+        String imageUrl,
         ColorStatus status,
         Instant createdAt,
         Instant updatedAt
 ) {
+
+    /**
+     * Constructor thuận tiện không kèm imageUrl (hỗ trợ tương thích ngược).
+     */
+    public ColorResponse(Long id, String colorName, ColorStatus status, Instant createdAt, Instant updatedAt) {
+        this(id, colorName, null, status, createdAt, updatedAt);
+    }
 
     /**
      * Chuyển đổi từ entity {@link Color} sang DTO {@link ColorResponse}.
@@ -32,6 +41,7 @@ public record ColorResponse(
         return new ColorResponse(
                 color.getId(),
                 color.getColorName(),
+                color.getImageUrl(),
                 color.getStatus(),
                 color.getCreatedAt(),
                 color.getUpdatedAt()

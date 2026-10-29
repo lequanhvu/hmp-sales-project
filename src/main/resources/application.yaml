@@ -61,3 +61,19 @@ app:
     allowed-headers: "*"
     # Cho phép gửi kèm thông tin xác thực/cookie (cần thiết cho cookie HttpOnly của Refresh Token)
     allow-credentials: true
+
+  # Cấu hình phân trang (Pagination)
+  pagination:
+    # Chỉ số trang mặc định (bắt đầu từ 0)
+    default-page: ${APP_PAGINATION_DEFAULT_PAGE:0}
+    # Kích thước trang mặc định (số bản ghi trên mỗi trang)
+    default-page-size: ${APP_PAGINATION_DEFAULT_PAGE_SIZE:20}
+    # Kích thước trang tối đa cho phép để tránh quá tải truy vấn
+    max-page-size: ${APP_PAGINATION_MAX_PAGE_SIZE:100}
+
+  # Cấu hình giới hạn sản phẩm & hình ảnh
+  product:
+    # Số lượng ảnh chính tối đa cho một sản phẩm (mặc định 1)
+    max-primary-images: ${APP_PRODUCT_MAX_PRIMARY_IMAGES:1}
+    # Số lượng ảnh phụ tối đa cho một sản phẩm (mặc định 10)
+    max-secondary-images: ${APP_PRODUCT_MAX_SECONDARY_IMAGES:10}

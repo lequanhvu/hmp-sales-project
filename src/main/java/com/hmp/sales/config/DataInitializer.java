@@ -389,11 +389,22 @@ public class DataInitializer implements ApplicationRunner {
         }
 
         // Colors
-        List<String> colors = List.of("Xanh ngọc", "Đỏ đậm", "Xanh rêu", "Xám lông chuột", "Trắng sữa");
-        for (String c : colors) {
-            if (!colorRepository.existsByColorNameAndIsDeletedFalse(c)) {
-                colorRepository.save(Color.builder().colorName(c).status(ColorStatus.ACTIVE).isDeleted(false).build());
-                log.info("[DataInitializer] Đã tạo màu sắc: {}", c);
+        Map<String, String> colors = Map.of(
+                "Xanh ngọc", "https://cdn.example.com/colors/xanh-ngoc.png",
+                "Đỏ đậm", "https://cdn.example.com/colors/do-dam.png",
+                "Xanh rêu", "https://cdn.example.com/colors/xanh-reu.png",
+                "Xám lông chuột", "https://cdn.example.com/colors/xam-long-chuot.png",
+                "Trắng sữa", "https://cdn.example.com/colors/trang-sua.png"
+        );
+        for (Map.Entry<String, String> entry : colors.entrySet()) {
+            if (!colorRepository.existsByColorNameAndIsDeletedFalse(entry.getKey())) {
+                colorRepository.save(Color.builder()
+                        .colorName(entry.getKey())
+                        .imageUrl(entry.getValue())
+                        .status(ColorStatus.ACTIVE)
+                        .isDeleted(false)
+                        .build());
+                log.info("[DataInitializer] Đã tạo màu sắc: {}", entry.getKey());
             }
         }
     }

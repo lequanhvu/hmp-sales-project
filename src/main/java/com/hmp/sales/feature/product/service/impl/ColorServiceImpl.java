@@ -60,7 +60,10 @@ public class ColorServiceImpl implements ColorService {
         if (colorRepository.existsByColorNameAndIsDeletedFalse(request.colorName())) {
             throw new BusinessRuleException("Tên màu sắc '" + request.colorName() + "' đã tồn tại.");
         }
-        Color color = Color.builder().colorName(request.colorName()).build();
+        Color color = Color.builder()
+                .colorName(request.colorName())
+                .imageUrl(request.imageUrl())
+                .build();
         color = colorRepository.save(color);
         log.info("[ColorService] Tạo màu sắc: {} (ID={})", color.getColorName(), color.getId());
         return ColorResponse.fromEntity(color);
@@ -75,6 +78,7 @@ public class ColorServiceImpl implements ColorService {
             throw new BusinessRuleException("Tên màu sắc '" + request.colorName() + "' đã tồn tại.");
         }
         color.setColorName(request.colorName());
+        color.setImageUrl(request.imageUrl());
         return ColorResponse.fromEntity(colorRepository.save(color));
     }
 

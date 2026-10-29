@@ -193,7 +193,6 @@ class ProductServiceImplTest {
     @DisplayName("uploadProductImage - Thêm ảnh chính thứ 2 khi đã có ảnh chính ném BusinessRuleException")
     void uploadProductImage_duplicatePrimary_throwsException() {
         when(productRepository.findByIdAndIsDeletedFalse(100L)).thenReturn(Optional.of(product));
-        when(productImageRepository.countByProductIdAndIsDeletedFalse(100L)).thenReturn(3L);
         when(productImageRepository.countByProductIdAndIsPrimaryTrueAndIsDeletedFalse(100L)).thenReturn(1L);
 
         ProductImageUploadRequest req = new ProductImageUploadRequest("https://img.com/primary2.png", true, 0);
@@ -240,5 +239,87 @@ class ProductServiceImplTest {
 
         ProductDetailResponse unlocked = productService.unlockProduct(100L);
         assertThat(unlocked.status()).isEqualTo(ProductStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("uploadProductImages - Tải lên danh sách nhiều ảnh phụ thành công")
+    void uploadProductImages_success() {
+        when(productRepository.findByIdAndIsDeletedFalse(100L)).thenReturn(Optional.of(product));
+        when(productImageRepository.countByProductIdAndIsPrimaryFalseAndIsDeletedFalse(100L)).thenReturn(2L);
+        when(productImageRepository.countByProductIdAndIsDeletedFalse(100L)).thenReturn(3L);
+
+        List<ProductImageUploadRequest> requests = List.of(
+                new ProductImageUploadRequest("https://img.com/p1.png", false, 1),
+                new ProductImageUploadRequest("https://img.com/p2.png", false, 2)
+        );
+
+        when(productImageRepository.saveAll(anyList())).thenAnswer(inv -> {
+            List<ProductImage> list = inv.getArgument(0);
+            long id = 500L;
+            for (ProductImage pi : list) {
+                pi.setId(id++);
+            }
+            return list;
+        });
+
+        List<ProductImageResponse> responses = productService.uploadProductImages(100L, requests);
+
+        assertThat(responses).hasSize(2);
+        assertThat(responses.get(0).imageUrl()).isEqualTo("https://img.com/p1.png");
+        assertThat(responses.get(1).imageUrl()).isEqualTo("https://img.com/p2.png");
+    }
+
+    @Test
+    @DisplayName("uploadProductImages - Danh sách vượt quá 10 ảnh ném BusinessRuleException")
+    void uploadProductImages_exceeds10ListSize_throwsException() {
+        when(productRepository.findByIdAndIsDeletedFalse(100L)).thenReturn(Optional.of(product));
+
+        List<ProductImageUploadRequest> requests = new java.util.ArrayList<>();
+        for (int i = 0; i < 11; i++) {
+            requests.add(new ProductImageUploadRequest("https://img.com/" + i + ".png", false, i));
+        }
+
+        assertThatThrownBy(() -> productService.uploadProductImages(100L, requests))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("vượt quá 10 ảnh");
+    }
+
+    @Test
+    @DisplayName("uploadProductImages - Có nhiều hơn 1 ảnh chính ném BusinessRuleException")
+    void uploadProductImages_multiplePrimary_throwsException() {
+        when(productRepository.findByIdAndIsDeletedFalse(100L)).thenReturn(Optional.of(product));
+
+        List<ProductImageUploadRequest> requests = List.of(
+                new ProductImageUploadRequest("https://img.com/p1.png", true, 1),
+                new ProductImageUploadRequest("https://img.com/p2.png", true, 2)
+        );
+
+        assertThatThrownBy(() -> productService.uploadProductImages(100L, requests))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("nhiều hơn 1 ảnh đại diện");
+    }
+
+    @Test
+    @DisplayName("deleteProductImages - Xóa danh sách ảnh thành công")
+    void deleteProductImages_success() {
+        when(productRepository.findByIdAndIsDeletedFalse(100L)).thenReturn(Optional.of(product));
+
+        ProductImage img1 = ProductImage.builder().id(501L).product(product).isDeleted(false).build();
+        ProductImage img2 = ProductImage.builder().id(502L).product(product).isDeleted(false).build();
+
+        when(productImageRepository.findByProductIdAndIdInAndIsDeletedFalse(100L, List.of(501L, 502L)))
+                .thenReturn(List.of(img1, img2));
+
+        productService.deleteProductImages(100L, List.of(501L, 502L));
+
+        verify(productImageRepository).softDeleteByProductIdAndIds(100L, List.of(501L, 502L));
+    }
+
+    @Test
+    @DisplayName("deleteProductImages - Danh sách rỗng ném BusinessRuleException")
+    void deleteProductImages_emptyList_throwsException() {
+        assertThatThrownBy(() -> productService.deleteProductImages(100L, List.of()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("không được để trống");
     }
 }

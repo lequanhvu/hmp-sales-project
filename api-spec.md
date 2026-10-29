@@ -466,11 +466,13 @@ Returns list of active manufacturing colors.
     {
       "colorId": 1,
       "colorName": "Xanh ngọc",
+      "imageUrl": "https://cdn.example.com/colors/xanh-ngoc.png",
       "status": "ACTIVE"
     },
     {
       "colorId": 2,
       "colorName": "Đỏ đậm",
+      "imageUrl": "https://cdn.example.com/colors/do-dam.png",
       "status": "ACTIVE"
     }
   ],
@@ -2019,18 +2021,99 @@ The product supports one main image and up to ten secondary images according to 
 }
 ```
 
-## 10.7 Delete product image
+## 10.7 Batch upload product images
+
+```http
+POST /api/v1/manager/products/{productId}/images/batch
+```
+
+Upload multiple product images at once (typically secondary images). Enforces maximum batch size and total secondary image limit (configurable via `app.product.max-secondary-images`, default 10).
+
+### Request example
+
+```json
+[
+  {
+    "imageUrl": "https://cdn.example.com/products/img1.jpg",
+    "isPrimary": false,
+    "displayOrder": 1
+  },
+  {
+    "imageUrl": "https://cdn.example.com/products/img2.jpg",
+    "isPrimary": false,
+    "displayOrder": 2
+  }
+]
+```
+
+### Success response — 201
+
+```json
+{
+  "statusCode": 201,
+  "data": [
+    {
+      "id": 501,
+      "productId": 100,
+      "imageUrl": "https://cdn.example.com/products/img1.jpg",
+      "isPrimary": false,
+      "displayOrder": 1
+    },
+    {
+      "id": 502,
+      "productId": 100,
+      "imageUrl": "https://cdn.example.com/products/img2.jpg",
+      "isPrimary": false,
+      "displayOrder": 2
+    }
+  ],
+  "message": "Tải lên danh sách ảnh sản phẩm thành công.",
+  "timestamp": "2026-10-29T20:00:00"
+}
+```
+
+## 10.8 Delete product image
 
 ```http
 DELETE /api/v1/manager/products/{productId}/images/{imageId}
 ```
 
-Deletion is permanent.
+Deletion is soft-delete (`isDeleted = true`).
+
+### Success response — 200
+
+```json
+{
+  "statusCode": 200,
+  "data": null,
+  "message": "Xóa ảnh sản phẩm thành công.",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+### Failure response — 404
+
+```json
+{
+  "statusCode": 404,
+  "data": null,
+  "message": "Không tìm thấy ảnh ID: 99",
+  "timestamp": "2026-10-01T10:00:00"
+}
+```
+
+## 10.9 Batch delete product images
+
+```http
+DELETE /api/v1/manager/products/{productId}/images/batch
+```
+
+Soft-delete multiple product images at once by a list of image IDs. Accepts IDs via JSON array in request body or `ids` query parameter.
 
 ### Request example
 
 ```json
-{}
+[501, 502]
 ```
 
 ### Success response — 200
@@ -2039,12 +2122,21 @@ Deletion is permanent.
 {
   "statusCode": 200,
   "data": null,
-  "message": "Thành công",
-  "timestamp": "2026-10-01T10:00:00"
+  "message": "Xóa danh sách ảnh sản phẩm thành công.",
+  "timestamp": "2026-10-29T20:00:00"
 }
 ```
 
-### Failure response — 404
+### Failure response — 400
+
+```json
+{
+  "statusCode": 400,
+  "data": null,
+  "message": "Danh sách ID ảnh cần xóa không được để trống.",
+  "timestamp": "2026-10-29T20:00:00"
+}
+```
 
 ```json
 {
@@ -3133,6 +3225,7 @@ GET /api/v1/admin/colors
       {
         "colorId": 1,
         "colorName": "Xanh ngọc",
+        "imageUrl": "https://cdn.example.com/colors/xanh-ngoc.png",
         "status": "ACTIVE",
         "createdAt": "2026-10-01T10:00:00",
         "updatedAt": "2026-10-01T10:00:00"
@@ -3160,7 +3253,8 @@ POST /api/v1/admin/colors
 
 ```json
 {
-  "colorName": "Xanh rêu"
+  "colorName": "Xanh rêu",
+  "imageUrl": "https://cdn.example.com/colors/xanh-reu.png"
 }
 ```
 
@@ -3172,6 +3266,7 @@ POST /api/v1/admin/colors
   "data": {
     "colorId": 3,
     "colorName": "Xanh rêu",
+    "imageUrl": "https://cdn.example.com/colors/xanh-reu.png",
     "status": "ACTIVE"
   },
   "message": "Tạo màu sắc thành công.",

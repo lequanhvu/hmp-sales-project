@@ -65,4 +65,24 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     @Transactional
     @Query("UPDATE ProductImage pi SET pi.isDeleted = true WHERE pi.product.id = :productId")
     void softDeleteByProductId(@Param("productId") Long productId);
+
+    /**
+     * Tìm danh sách ảnh theo danh sách ID thuộc sản phẩm và chưa bị xóa mềm.
+     *
+     * @param productId ID sản phẩm
+     * @param imageIds  danh sách ID ảnh cần tìm
+     * @return danh sách ảnh thuộc sản phẩm
+     */
+    List<ProductImage> findByProductIdAndIdInAndIsDeletedFalse(Long productId, List<Long> imageIds);
+
+    /**
+     * Soft-delete danh sách ảnh theo danh sách ID thuộc một sản phẩm.
+     *
+     * @param productId ID sản phẩm
+     * @param imageIds  danh sách ID ảnh cần xóa mềm
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE ProductImage pi SET pi.isDeleted = true WHERE pi.product.id = :productId AND pi.id IN :imageIds")
+    void softDeleteByProductIdAndIds(@Param("productId") Long productId, @Param("imageIds") List<Long> imageIds);
 }

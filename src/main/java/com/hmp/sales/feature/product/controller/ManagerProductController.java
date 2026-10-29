@@ -11,6 +11,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * REST Controller dành cho Quản lý (Manager) điều hành sản phẩm tôn sóng.
  * <p>
@@ -131,6 +133,22 @@ public class ManagerProductController {
     }
 
     /**
+     * Thêm hàng loạt ảnh cho sản phẩm (hỗ trợ upload nhiều ảnh phụ cùng một lúc).
+     *
+     * @param productId ID sản phẩm cần thêm ảnh
+     * @param requests  danh sách thông tin ảnh cần tải lên (tối đa theo cấu hình app.product.max-secondary-images)
+     * @return danh sách chi tiết các ảnh vừa tạo
+     */
+    @PostMapping("/products/{productId}/images/batch")
+    public ResponseEntity<ApiSuccessResponse<List<ProductImageResponse>>> uploadProductImagesBatch(
+            @PathVariable Long productId,
+            @Valid @RequestBody List<ProductImageUploadRequest> requests) {
+        List<ProductImageResponse> response = productService.uploadProductImages(productId, requests);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiSuccessResponse.created("Tải lên danh sách ảnh sản phẩm thành công.", response));
+    }
+
+    /**
      * Xóa mềm một ảnh của sản phẩm.
      *
      * @param productId ID sản phẩm
@@ -143,6 +161,24 @@ public class ManagerProductController {
             @PathVariable Long imageId) {
         productService.deleteProductImage(productId, imageId);
         return ResponseEntity.ok(ApiSuccessResponse.success("Xóa ảnh sản phẩm thành công.", null));
+    }
+
+    /**
+     * Xóa mềm hàng loạt ảnh của sản phẩm theo danh sách ID ảnh.
+     *
+     * @param productId ID sản phẩm
+     * @param imageIds  danh sách ID ảnh cần xóa mềm (truyền qua request body hoặc query param 'ids')
+     * @param idsParam  danh sách ID ảnh truyền qua query param
+     * @return thông báo xóa thành công
+     */
+    @DeleteMapping("/products/{productId}/images/batch")
+    public ResponseEntity<ApiSuccessResponse<Void>> deleteProductImagesBatch(
+            @PathVariable Long productId,
+            @RequestBody(required = false) List<Long> imageIds,
+            @RequestParam(name = "ids", required = false) List<Long> idsParam) {
+        List<Long> targets = (imageIds != null && !imageIds.isEmpty()) ? imageIds : idsParam;
+        productService.deleteProductImages(productId, targets);
+        return ResponseEntity.ok(ApiSuccessResponse.success("Xóa danh sách ảnh sản phẩm thành công.", null));
     }
 
     /**

@@ -2,6 +2,7 @@ package com.hmp.sales.feature.product.service.impl;
 
 import com.hmp.sales.common.exception.BusinessRuleException;
 import com.hmp.sales.common.exception.ResourceNotFoundException;
+import com.hmp.sales.config.AppProperties;
 import com.hmp.sales.feature.category.entity.Category;
 import com.hmp.sales.feature.category.repository.CategoryRepository;
 import com.hmp.sales.feature.product.dto.*;
@@ -11,6 +12,7 @@ import com.hmp.sales.feature.product.service.ProductService;
 import com.hmp.sales.feature.user.repository.UserRepository;
 import com.hmp.sales.security.PermissionEvaluationService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,8 +37,9 @@ import java.util.Map;
 @Service
 public class ProductServiceImpl implements ProductService {
 
-    private static final int MAX_TOTAL_IMAGES = 11;
-    private static final int MAX_SECONDARY_IMAGES = 10;
+    private static final int DEFAULT_MAX_TOTAL_IMAGES = 11;
+    private static final int DEFAULT_MAX_SECONDARY_IMAGES = 10;
+    private static final int DEFAULT_MAX_PRIMARY_IMAGES = 1;
     private static final String ALLOWED_SORT_FIELDS_WITHOUT_PRICE = "productName,createdAt";
 
     private final ProductRepository productRepository;
@@ -50,21 +53,41 @@ public class ProductServiceImpl implements ProductService {
     private final UnitRepository unitRepository;
     private final UserRepository userRepository;
     private final PermissionEvaluationService permissionEvaluationService;
+    private final AppProperties appProperties;
 
     /**
-     * Khởi tạo ProductServiceImpl với tất cả dependency cần thiết.
-     *
-     * @param productRepository           repository quản lý sản phẩm
-     * @param productImageRepository      repository quản lý ảnh sản phẩm
-     * @param productVariantRepository    repository quản lý biến thể
-     * @param productColorRepository      repository liên kết màu sắc-biến thể
-     * @param productPriceRepository      repository quản lý bảng giá
-     * @param categoryRepository          repository quản lý danh mục
-     * @param brandRepository             repository quản lý thương hiệu
-     * @param colorRepository             repository quản lý màu sắc
-     * @param unitRepository              repository quản lý đơn vị tính
-     * @param userRepository              repository quản lý người dùng
-     * @param permissionEvaluationService service kiểm tra quyền động PRODUCT_PRICE_VIEW
+     * Khởi tạo ProductServiceImpl với tất cả dependency và cấu hình ứng dụng.
+     */
+    @Autowired
+    public ProductServiceImpl(
+            ProductRepository productRepository,
+            ProductImageRepository productImageRepository,
+            ProductVariantRepository productVariantRepository,
+            ProductColorRepository productColorRepository,
+            ProductPriceRepository productPriceRepository,
+            CategoryRepository categoryRepository,
+            BrandRepository brandRepository,
+            ColorRepository colorRepository,
+            UnitRepository unitRepository,
+            UserRepository userRepository,
+            PermissionEvaluationService permissionEvaluationService,
+            @Autowired(required = false) AppProperties appProperties) {
+        this.productRepository = productRepository;
+        this.productImageRepository = productImageRepository;
+        this.productVariantRepository = productVariantRepository;
+        this.productColorRepository = productColorRepository;
+        this.productPriceRepository = productPriceRepository;
+        this.categoryRepository = categoryRepository;
+        this.brandRepository = brandRepository;
+        this.colorRepository = colorRepository;
+        this.unitRepository = unitRepository;
+        this.userRepository = userRepository;
+        this.permissionEvaluationService = permissionEvaluationService;
+        this.appProperties = appProperties;
+    }
+
+    /**
+     * Khởi tạo ProductServiceImpl không kèm AppProperties (dùng cho tests hoặc fallback).
      */
     public ProductServiceImpl(
             ProductRepository productRepository,
@@ -78,17 +101,27 @@ public class ProductServiceImpl implements ProductService {
             UnitRepository unitRepository,
             UserRepository userRepository,
             PermissionEvaluationService permissionEvaluationService) {
-        this.productRepository = productRepository;
-        this.productImageRepository = productImageRepository;
-        this.productVariantRepository = productVariantRepository;
-        this.productColorRepository = productColorRepository;
-        this.productPriceRepository = productPriceRepository;
-        this.categoryRepository = categoryRepository;
-        this.brandRepository = brandRepository;
-        this.colorRepository = colorRepository;
-        this.unitRepository = unitRepository;
-        this.userRepository = userRepository;
-        this.permissionEvaluationService = permissionEvaluationService;
+        this(productRepository, productImageRepository, productVariantRepository, productColorRepository,
+                productPriceRepository, categoryRepository, brandRepository, colorRepository, unitRepository,
+                userRepository, permissionEvaluationService, null);
+    }
+
+    private int getMaxSecondaryImages() {
+        if (appProperties != null && appProperties.product() != null && appProperties.product().maxSecondaryImages() > 0) {
+            return appProperties.product().maxSecondaryImages();
+        }
+        return DEFAULT_MAX_SECONDARY_IMAGES;
+    }
+
+    private int getMaxPrimaryImages() {
+        if (appProperties != null && appProperties.product() != null && appProperties.product().maxPrimaryImages() > 0) {
+            return appProperties.product().maxPrimaryImages();
+        }
+        return DEFAULT_MAX_PRIMARY_IMAGES;
+    }
+
+    private int getMaxTotalImages() {
+        return getMaxPrimaryImages() + getMaxSecondaryImages();
     }
 
     /**
@@ -234,45 +267,87 @@ public class ProductServiceImpl implements ProductService {
     /** {@inheritDoc} */
     @Override
     @Transactional
-    public ProductImageResponse uploadProductImage(Long productId, ProductImageUploadRequest request) {
+    public List<ProductImageResponse> uploadProductImages(Long productId, List<ProductImageUploadRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new BusinessRuleException("Danh sách ảnh tải lên không được để trống.");
+        }
         Product product = findActiveProduct(productId);
 
-        long totalImages = productImageRepository.countByProductIdAndIsDeletedFalse(productId);
-        if (totalImages >= MAX_TOTAL_IMAGES) {
-            throw new BusinessRuleException("Sản phẩm đã đủ tối đa " + MAX_TOTAL_IMAGES + " ảnh.");
+        int maxSecondary = getMaxSecondaryImages();
+        int maxPrimary = getMaxPrimaryImages();
+        int maxTotal = getMaxTotalImages();
+
+        if (requests.size() > maxSecondary) {
+            throw new BusinessRuleException("Số lượng ảnh tải lên một lần không được vượt quá " + maxSecondary + " ảnh.");
         }
 
-        if (Boolean.TRUE.equals(request.isPrimary())) {
-            long primaryCount = productImageRepository.countByProductIdAndIsPrimaryTrueAndIsDeletedFalse(productId);
-            if (primaryCount >= 1) {
+        long primaryRequestsCount = requests.stream().filter(r -> Boolean.TRUE.equals(r.isPrimary())).count();
+        if (primaryRequestsCount > maxPrimary) {
+            throw new BusinessRuleException("Không thể tải lên nhiều hơn " + maxPrimary + " ảnh đại diện trong cùng một lần.");
+        }
+
+        if (primaryRequestsCount > 0) {
+            long existingPrimaryCount = productImageRepository.countByProductIdAndIsPrimaryTrueAndIsDeletedFalse(productId);
+            if (existingPrimaryCount + primaryRequestsCount > maxPrimary) {
                 throw new BusinessRuleException("Sản phẩm đã có ảnh đại diện. Vui lòng xóa ảnh đại diện cũ trước.");
             }
-        } else {
-            long secondaryCount = productImageRepository.countByProductIdAndIsPrimaryFalseAndIsDeletedFalse(productId);
-            if (secondaryCount >= MAX_SECONDARY_IMAGES) {
-                throw new BusinessRuleException("Sản phẩm đã đủ tối đa " + MAX_SECONDARY_IMAGES + " ảnh phụ.");
-            }
         }
 
-        ProductImage image = ProductImage.builder()
-                .product(product)
-                .imageUrl(request.imageUrl())
-                .isPrimary(request.isPrimary())
-                .displayOrder(request.displayOrder() != null ? request.displayOrder() : 0)
-                .build();
-        image = productImageRepository.save(image);
-        return ProductImageResponse.fromEntity(image);
+        long secondaryRequestsCount = requests.size() - primaryRequestsCount;
+        long existingSecondaryCount = productImageRepository.countByProductIdAndIsPrimaryFalseAndIsDeletedFalse(productId);
+        if (existingSecondaryCount + secondaryRequestsCount > maxSecondary) {
+            throw new BusinessRuleException("Sản phẩm đã đủ tối đa " + maxSecondary + " ảnh phụ.");
+        }
+
+        long existingTotalImages = productImageRepository.countByProductIdAndIsDeletedFalse(productId);
+        if (existingTotalImages + requests.size() > maxTotal) {
+            throw new BusinessRuleException("Sản phẩm đã đủ tối đa " + maxTotal + " ảnh.");
+        }
+
+        List<ProductImage> imagesToSave = requests.stream()
+                .map(req -> ProductImage.builder()
+                        .product(product)
+                        .imageUrl(req.imageUrl())
+                        .isPrimary(Boolean.TRUE.equals(req.isPrimary()))
+                        .displayOrder(req.displayOrder() != null ? req.displayOrder() : 0)
+                        .build())
+                .toList();
+
+        List<ProductImage> savedImages = productImageRepository.saveAll(imagesToSave);
+        log.info("[ProductService] Đã tải lên {} ảnh cho sản phẩm ID={}", savedImages.size(), productId);
+        return savedImages.stream().map(ProductImageResponse::fromEntity).toList();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Transactional
+    public ProductImageResponse uploadProductImage(Long productId, ProductImageUploadRequest request) {
+        return uploadProductImages(productId, List.of(request)).get(0);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Transactional
+    public void deleteProductImages(Long productId, List<Long> imageIds) {
+        if (imageIds == null || imageIds.isEmpty()) {
+            throw new BusinessRuleException("Danh sách ID ảnh cần xóa không được để trống.");
+        }
+        findActiveProduct(productId); // validate product exists
+
+        List<ProductImage> images = productImageRepository.findByProductIdAndIdInAndIsDeletedFalse(productId, imageIds);
+        if (images.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy ảnh hợp lệ của sản phẩm để xóa.");
+        }
+
+        productImageRepository.softDeleteByProductIdAndIds(productId, imageIds);
+        log.info("[ProductService] Đã xóa mềm {} ảnh cho sản phẩm ID={}", images.size(), productId);
     }
 
     /** {@inheritDoc} */
     @Override
     @Transactional
     public void deleteProductImage(Long productId, Long imageId) {
-        findActiveProduct(productId); // validate product exists
-        ProductImage image = productImageRepository.findByIdAndIsDeletedFalse(imageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ảnh ID: " + imageId));
-        image.setIsDeleted(true);
-        productImageRepository.save(image);
+        deleteProductImages(productId, List.of(imageId));
     }
 
     /** {@inheritDoc} */
